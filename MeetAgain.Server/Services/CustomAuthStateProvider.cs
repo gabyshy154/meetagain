@@ -10,6 +10,7 @@ namespace MeetAgain.Server.Services
         private const string TokenKey = "authToken";
         private readonly IJSRuntime _js;
         private string? _token;
+        private AuthenticationState? _cachedState;
 
         public CustomAuthStateProvider(IJSRuntime js)
         {
@@ -19,6 +20,7 @@ namespace MeetAgain.Server.Services
         public async Task SetTokenAsync(string? token)
         {
             _token = token;
+            _cachedState = null;
 
             if (string.IsNullOrWhiteSpace(token))
                 await _js.InvokeVoidAsync("localStorage.removeItem", TokenKey);
@@ -34,7 +36,7 @@ namespace MeetAgain.Server.Services
             {
                 if (string.IsNullOrWhiteSpace(_token))
                 {
-                    // Read from shared localStorage — works across all tabs
+                    // Read from shared localStorage ï¿½ works across all tabs
                     _token = await _js.InvokeAsync<string?>("localStorage.getItem", TokenKey);
                 }
 
@@ -43,7 +45,12 @@ namespace MeetAgain.Server.Services
                 if (string.IsNullOrWhiteSpace(_token))
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
-                var decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(_token);
+                 if (_cachedState != null)
+                    return _cachedState;
+
+                    Console.WriteLine($">>> Before VerifyIdTokenAsync: {DateTime.Now:HH:mm:ss}");
+                    var decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(_token);
+                    Console.WriteLine($">>> After VerifyIdTokenAsync: {DateTime.Now:HH:mm:ss}");
 
                 decoded.Claims.TryGetValue("email", out var emailObj);
                 string email = emailObj?.ToString() ?? string.Empty;
@@ -55,12 +62,14 @@ namespace MeetAgain.Server.Services
                 };
 
                 var identity = new ClaimsIdentity(claims, "firebase");
-                return new AuthenticationState(new ClaimsPrincipal(identity));
+                _cachedState = new AuthenticationState(new ClaimsPrincipal(identity));
+                return _cachedState;
             }
             catch
             {
                 await _js.InvokeVoidAsync("localStorage.removeItem", TokenKey);
                 _token = null;
+                _cachedState = null;
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
         }

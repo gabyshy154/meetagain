@@ -110,12 +110,21 @@ namespace MeetAgain.Server.Services
                 var url = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={_apiKey}";
                 var payload = new { email, password, returnSecureToken = true };
 
+                Console.WriteLine($">>> Before Firebase login POST: {DateTime.Now:HH:mm:ss}");
                 var response = await _http.PostAsJsonAsync(url, payload);
+                Console.WriteLine($">>> After Firebase login POST: {DateTime.Now:HH:mm:ss}");
                 var rawResponse = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    LastFirebaseError = rawResponse;
+                    var firebaseError = rawResponse ?? "";
+                    
+                    LastFirebaseError = firebaseError.Contains("INVALID_LOGIN_CREDENTIALS") ||
+                                        firebaseError.Contains("INVALID_PASSWORD") ||
+                                        firebaseError.Contains("EMAIL_NOT_FOUND")
+                        ? "Invalid email or password. Please try again."
+                        : "An error occurred during login. Please try again.";
+                    
                     return false;
                 }
 

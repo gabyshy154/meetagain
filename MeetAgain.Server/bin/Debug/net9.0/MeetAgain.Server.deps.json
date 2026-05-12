@@ -19,8 +19,7 @@
       "FirebaseAdmin/3.4.0": {
         "dependencies": {
           "Google.Api.Gax.Rest": "4.8.0",
-          "Google.Apis.Auth": "1.73.0",
-          "System.Collections.Immutable": "8.0.0"
+          "Google.Apis.Auth": "1.73.0"
         },
         "runtime": {
           "lib/net6.0/FirebaseAdmin.dll": {
@@ -43,8 +42,7 @@
       "Google.Api.Gax/4.12.1": {
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0",
-          "Newtonsoft.Json": "13.0.4",
-          "System.Diagnostics.DiagnosticSource": "6.0.2"
+          "Newtonsoft.Json": "13.0.4"
         },
         "runtime": {
           "lib/netstandard2.0/Google.Api.Gax.dll": {
@@ -60,8 +58,7 @@
           "Google.Apis.Auth": "1.73.0",
           "Grpc.Auth": "2.71.0",
           "Grpc.Core.Api": "2.71.0",
-          "Grpc.Net.Client": "2.71.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0"
+          "Grpc.Net.Client": "2.71.0"
         },
         "runtime": {
           "lib/netstandard2.0/Google.Api.Gax.Grpc.dll": {
@@ -73,8 +70,7 @@
       "Google.Api.Gax.Rest/4.8.0": {
         "dependencies": {
           "Google.Api.Gax": "4.12.1",
-          "Google.Apis.Auth": "1.73.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0"
+          "Google.Apis.Auth": "1.73.0"
         },
         "runtime": {
           "lib/netstandard2.0/Google.Api.Gax.Rest.dll": {
@@ -121,7 +117,6 @@
       "Google.Cloud.Firestore/3.13.0": {
         "dependencies": {
           "Google.Cloud.Firestore.V1": "3.13.0",
-          "System.Collections.Immutable": "8.0.0",
           "System.Linq.Async": "6.0.3"
         },
         "runtime": {
@@ -196,8 +191,7 @@
       },
       "Grpc.Net.Client/2.71.0": {
         "dependencies": {
-          "Grpc.Net.Common": "2.71.0",
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
+          "Grpc.Net.Common": "2.71.0"
         },
         "runtime": {
           "lib/net8.0/Grpc.Net.Client.dll": {
@@ -225,8 +219,6 @@
           }
         }
       },
-      "Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0": {},
-      "Microsoft.Extensions.Logging.Abstractions/6.0.0": {},
       "Newtonsoft.Json/13.0.4": {
         "runtime": {
           "lib/net6.0/Newtonsoft.Json.dll": {
@@ -243,8 +235,6 @@
           }
         }
       },
-      "System.Collections.Immutable/8.0.0": {},
-      "System.Diagnostics.DiagnosticSource/6.0.2": {},
       "System.Linq.Async/6.0.3": {
         "runtime": {
           "lib/net6.0/System.Linq.Async.dll": {
@@ -406,20 +396,6 @@
       "path": "microsoft.bcl.asyncinterfaces/6.0.0",
       "hashPath": "microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512"
     },
-    "Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-xlzi2IYREJH3/m6+lUrQlujzX8wDitm4QGnUu6kUXTQAWPuZY8i+ticFJbzfqaetLA6KR/rO6Ew/HuYD+bxifg==",
-      "path": "microsoft.extensions.dependencyinjection.abstractions/6.0.0",
-      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.6.0.0.nupkg.sha512"
-    },
-    "Microsoft.Extensions.Logging.Abstractions/6.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-/HggWBbTwy8TgebGSX5DBZ24ndhzi93sHUBDvP1IxbZD7FDokYzdAr6+vbWGjw2XAfR2EJ1sfKUotpjHnFWPxA==",
-      "path": "microsoft.extensions.logging.abstractions/6.0.0",
-      "hashPath": "microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512"
-    },
     "Newtonsoft.Json/13.0.4": {
       "type": "package",
       "serviceable": true,
@@ -433,20 +409,6 @@
       "sha512": "sha512-GLltyqEsE5/3IE+zYRP5sNa1l44qKl9v+bfdMcwg+M9qnQf47wK3H0SUR/T+3N4JEQXF3vV4CSuuo0rsg+nq2A==",
       "path": "system.codedom/7.0.0",
       "hashPath": "system.codedom.7.0.0.nupkg.sha512"
-    },
-    "System.Collections.Immutable/8.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-AurL6Y5BA1WotzlEvVaIDpqzpIPvYnnldxru8oXJU2yFxFUy3+pNXjXd1ymO+RA0rq0+590Q8gaz2l3Sr7fmqg==",
-      "path": "system.collections.immutable/8.0.0",
-      "hashPath": "system.collections.immutable.8.0.0.nupkg.sha512"
-    },
-    "System.Diagnostics.DiagnosticSource/6.0.2": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-6tQaIexFycaotdGn23lf3XJ/eI1GOjQKIvQDRFN9N4pwoNsKnHuXccQ3lnQO6GX8KAb1ic+6ZofJmPdbUVwZag==",
-      "path": "system.diagnostics.diagnosticsource/6.0.2",
-      "hashPath": "system.diagnostics.diagnosticsource.6.0.2.nupkg.sha512"
     },
     "System.Linq.Async/6.0.3": {
       "type": "package",

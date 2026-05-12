@@ -1,4 +1,4 @@
-/* _content/MeetAgain.Server/Shared/MainLayout.razor.rz.scp.css */
+/* /Shared/MainLayout.razor.rz.scp.css */
 .page[b-vy48mqpgbp] {
     position: relative;
     display: flex;
@@ -76,7 +76,7 @@ main[b-vy48mqpgbp] {
         padding-right: 1.5rem !important;
     }
 }
-/* _content/MeetAgain.Server/Shared/NavMenu.razor.rz.scp.css */
+/* /Shared/NavMenu.razor.rz.scp.css */
 .navbar-toggler[b-f8ujzfwt7r] {
     background-color: rgba(255, 255, 255, 0.1);
 }
