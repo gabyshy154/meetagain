@@ -1,6 +1,5 @@
-using MeetAgain.Server.Models;
-
 using Google.Cloud.Firestore;
+using MeetAgain.Server.Models;
 
 namespace MeetAgain.Server.Models
 {
@@ -10,6 +9,7 @@ namespace MeetAgain.Server.Models
         [FirestoreProperty] public string Id { get; set; } = "";
         [FirestoreProperty] public string OwnerId { get; set; } = "";
         [FirestoreProperty] public string Name { get; set; } = "";
+        [FirestoreProperty] public string? Description { get; set; }
         [FirestoreProperty] public string CreatedAt { get; set; } = "";
     }
 

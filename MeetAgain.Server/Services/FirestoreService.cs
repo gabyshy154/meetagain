@@ -81,8 +81,8 @@ namespace MeetAgain.Server.Services
         public async Task<List<MeetupDto>> GetUserMeetupsAsync(string userId)
         {
             var query = _db.Collection("meetups")
-                           .WhereEqualTo("CreatorUserId", userId)
-                           .OrderBy("EventDateTime");
+                        .WhereEqualTo("CreatorUserId", userId)
+                        .OrderBy("EventDateTime");
 
             var snap = await query.GetSnapshotAsync();
 
@@ -96,7 +96,12 @@ namespace MeetAgain.Server.Services
                     Id = m.Id,
                     Title = m.Title,
                     Description = m.Description,
-                    EventDateTime = m.EventDateTime
+                    Location = m.Location,
+                    EventDateTime = m.EventDateTime,
+                    IsCreator = true,
+                    CreatorName = m.CreatorName,
+                    ParticipantCount = m.ParticipantCount,
+                    MyRSVPStatus = "accepted"
                 };
             }).ToList();
         }
@@ -150,21 +155,79 @@ namespace MeetAgain.Server.Services
                      .SetAsync(friend, SetOptions.MergeAll);
         }
 
-        public async Task<List<Friend>> GetFriendsAsync(string userId)
+                public async Task<List<Friend>> GetFriendsAsync(string userId)
+                {
+                    var snap = await _db.Collection("friends")
+                                        .WhereEqualTo("UserId", userId)
+                                        .GetSnapshotAsync();
+
+                    return snap.Documents.Select(d => d.ConvertTo<Friend>()).ToList();
+                }
+
+                public Task RemoveFriendAsync(string friendId)
+                {
+                    if (string.IsNullOrWhiteSpace(friendId)) return Task.CompletedTask;
+                    return _db.Collection("friends").Document(friendId).DeleteAsync();
+                }
+
+                public async Task<AppUser?> GetUserByEmailAsync(string email)
         {
-            var snap = await _db.Collection("friends")
-                                .WhereEqualTo("Id", userId)
+            var snap = await _db.Collection("users")
+                                .WhereEqualTo("Email", email)
+                                .Limit(1)
                                 .GetSnapshotAsync();
 
-            return snap.Documents.Select(d => d.ConvertTo<Friend>()).ToList();
+            if (snap.Count == 0) return null;
+
+            var user = snap.Documents[0].ConvertTo<AppUser>();
+            user.Uid = snap.Documents[0].Id;
+            return user;
         }
 
-        public Task RemoveFriendAsync(string friendId)
+        public async Task SendFriendRequestAsync(FriendRequest request)
         {
-            if (string.IsNullOrWhiteSpace(friendId)) return Task.CompletedTask;
-            return _db.Collection("friends").Document(friendId).DeleteAsync();
+            if (string.IsNullOrWhiteSpace(request.Id))
+                request.Id = NewId();
+
+            await _db.Collection("friendRequests")
+                    .Document(request.Id)
+                    .SetAsync(request, SetOptions.MergeAll);
         }
 
+        public async Task<FriendRequest?> GetFriendRequestAsync(string fromUserId, string toUserId)
+        {
+            var snap = await _db.Collection("friendRequests")
+                                .WhereEqualTo("FromUserId", fromUserId)
+                                .WhereEqualTo("ToUserId", toUserId)
+                                .Limit(1)
+                                .GetSnapshotAsync();
+
+            if (snap.Count == 0) return null;
+
+            var req = snap.Documents[0].ConvertTo<FriendRequest>();
+            req.Id = snap.Documents[0].Id;
+            return req;
+        }
+
+        public async Task<List<FriendRequest>> GetFriendRequestsAsync(string toUserId)
+        {
+            var snap = await _db.Collection("friendRequests")
+                                .WhereEqualTo("ToUserId", toUserId)
+                                .WhereEqualTo("Status", "pending")
+                                .GetSnapshotAsync();
+
+            return snap.Documents.Select(d =>
+            {
+                var r = d.ConvertTo<FriendRequest>();
+                r.Id = d.Id;
+                return r;
+            }).ToList();
+        }
+
+        public Task DeleteFriendRequestAsync(string requestId)
+        {
+            return _db.Collection("friendRequests").Document(requestId).DeleteAsync();
+        }
         // ------------------------------------------------------
         // GROUPS
         // ------------------------------------------------------
@@ -213,5 +276,35 @@ namespace MeetAgain.Server.Services
         // UTILS
         // ------------------------------------------------------
         public string NewId() => Guid.NewGuid().ToString("N");
+    
+
+    public async Task<Group?> GetGroupAsync(string groupId)
+        {
+            var doc = await _db.Collection("groups").Document(groupId).GetSnapshotAsync();
+            if (!doc.Exists) return null;
+
+            var group = doc.ConvertTo<Group>();
+            group.Id = doc.Id;
+            return group;
+        }
+
+        public Task RemoveMemberAsync(string groupId, string userId)
+            {
+                return _db.Collection("groups").Document(groupId)
+                        .Collection("members").Document(userId)
+                        .DeleteAsync();
+            }
+
+        public async Task DeleteGroupAsync(string groupId)
+            {
+                // Delete all members first
+                var members = await GetGroupMembersAsync(groupId);
+                foreach (var member in members)
+                {
+                    await RemoveMemberAsync(groupId, member.UserId);
+                }
+
+                await _db.Collection("groups").Document(groupId).DeleteAsync();
+            }
     }
 }

@@ -34,12 +34,28 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXV0aFxSZWdpc3Rlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Calendar.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2FsZW5kYXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/CreateMeetup.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ3JlYXRlTWVldHVwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Diagnostic.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGlhZ25vc3RpYy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Friends.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRnJpZW5kcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Group.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Index.razor]
@@ -56,6 +72,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Meetups.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWVldHVwcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/Pages/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTm90aWZpY2F0aW9ucy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/ronal/Downloads/MeetAgain (Final Project)/MeetAgain.Server/_Imports.razor]

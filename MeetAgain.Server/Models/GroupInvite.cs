@@ -1,6 +1,5 @@
-using MeetAgain.Server.Models;
-
 using Google.Cloud.Firestore;
+using MeetAgain.Server.Models;
 
 namespace MeetAgain.Server.Models
 {

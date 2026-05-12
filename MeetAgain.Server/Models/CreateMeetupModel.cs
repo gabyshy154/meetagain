@@ -9,6 +9,9 @@ namespace MeetAgain.Server.Models
 
         [Required]
         public string Description { get; set; } = "";
+        
+        [Required]
+        public string Location { get; set; } = string.Empty;
 
         [Required]
         public DateTime Date { get; set; } = DateTime.Today;

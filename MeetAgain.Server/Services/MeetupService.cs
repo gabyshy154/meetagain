@@ -33,8 +33,10 @@ namespace MeetAgain.Server.Services
             {
                 Id = Guid.NewGuid().ToString("N"),
                 CreatorUserId = currentUser.Uid,
+                CreatorName = currentUser.DisplayName ?? currentUser.Email ?? "",
                 Title = model.Title,
                 Description = model.Description,
+                Location = model.Location,
                 EventDateTime = eventDateTime,
                 CreatedAt = DateTime.UtcNow
             };
