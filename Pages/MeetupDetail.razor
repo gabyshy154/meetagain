@@ -1,0 +1,446 @@
+@page "/meetups/{MeetupId}"
+@inject MeetupService MeetupService
+@inject FirestoreService FirestoreService
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="max-w-4xl mx-auto">
+    @if (loading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 1rem; color: var(--gray-600);">Loading meetup…</p>
+        </div>
+    }
+    else if (meetup == null)
+    {
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">❌</div>
+                <h3 class="empty-state-title">Meetup Not Found</h3>
+                <p class="empty-state-description">
+                    This meetup doesn't exist or you don't have permission to view it.
+                </p>
+                <a href="/meetups" class="btn btn-primary">Back to Meetups</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card fade-in">
+            <div class="meetup-header">
+                <div class="meetup-header-content">
+                    <a href="/meetups" class="btn-back">← Back to Meetups</a>
+                    <h1 class="meetup-detail-title">@meetup.Title</h1>
+
+                    <div class="meetup-meta">
+                        <span class="meta-item">📅 @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy")</span>
+                        <span class="meta-item">🕐 @meetup.EventDateTime.ToLocalTime().ToString("h:mm tt")</span>
+                        <span class="meta-badge">
+                            @if (IsPast())
+                            {
+                                <span class="badge badge-gray">Past Event</span>
+                            }
+                            else if (IsToday())
+                            {
+                                <span class="badge badge-warning">Today</span>
+                            }
+                            else if (IsSoon())
+                            {
+                                <span class="badge badge-primary">Coming Soon</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-success">Upcoming</span>
+                            }
+                        </span>
+                    </div>
+
+                    <!-- Creator info -->
+                    <p style="color: var(--gray-500); font-size: 0.875rem; margin-top: 0.5rem;">
+                        Organized by <strong>@meetup.CreatorName</strong>
+                        @if (isCreator)
+                        {
+                            <span class="badge" style="background: var(--primary); color: white; margin-left: 0.5rem; font-size: 0.7rem;">You</span>
+                        }
+                    </p>
+                </div>
+
+                <!-- FIX: Only show Edit/Delete buttons if the current user is the creator -->
+                @if (isCreator && !IsPast())
+                {
+                    <div class="meetup-actions">
+                        <a href="/meetups/@MeetupId/edit" class="btn btn-secondary">✏️ Edit</a>
+
+                        <button type="button"
+                                @onclick="ShowDeleteModal"
+                                class="btn btn-outline"
+                                style="color: var(--danger); border-color: var(--danger);">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card fade-in">
+            <h2 class="section-title">Description</h2>
+            <p class="meetup-description">@meetup.Description</p>
+        </div>
+
+        @if (!IsPast())
+        {
+            <div class="card fade-in countdown-card">
+                <div class="countdown-content">
+                    <div class="countdown-icon">⏰</div>
+                    <div>
+                        <h3 class="countdown-title">Time Until Meetup</h3>
+                        <p class="countdown-time">@GetCountdown()</p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card fade-in">
+            <h2 class="section-title">Event Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Created</span>
+                    <span class="info-value">@meetup.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">Event ID</span>
+                    <span class="info-value">@meetup.Id.Substring(0, 8)…</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">
+                        @if (IsPast())
+                        {
+                            @:Completed
+                        }
+                        else
+                        {
+                            @:Scheduled
+                        }
+                    </span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">Your Role</span>
+                    <span class="info-value">@(isCreator ? "Organizer" : "Participant")</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal — uses Blazor state, not JS -->
+@if (showDeleteModal && meetup != null)
+{
+    <div class="modal-overlay" @onclick="HideDeleteModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h3 class="modal-title">Delete Meetup?</h3>
+
+            <p class="modal-description">
+                Are you sure you want to delete "<strong>@meetup.Title</strong>"?
+                This action cannot be undone.
+            </p>
+
+            @if (!string.IsNullOrEmpty(deleteError))
+            {
+                <div class="alert alert-error" style="margin-bottom: 1rem;">
+                    <span>⚠️ @deleteError</span>
+                </div>
+            }
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" @onclick="HideDeleteModal" disabled="@isDeleting">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary"
+                        style="background: var(--danger);"
+                        @onclick="ConfirmDelete"
+                        disabled="@isDeleting">
+                    @if (isDeleting)
+                    {
+                        <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <span>Delete Meetup</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .meetup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .meetup-header-content { flex: 1; }
+
+    .btn-back {
+        display: inline-block;
+        color: var(--gray-600);
+        text-decoration: none;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-back:hover { color: var(--primary); }
+
+    .meetup-detail-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.75rem;
+    }
+
+    .meetup-meta {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .meta-item { color: var(--gray-600); font-size: 0.95rem; }
+
+    .meetup-actions { display: flex; gap: 0.75rem; flex-shrink: 0; }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+    }
+
+    .meetup-description {
+        color: var(--gray-700);
+        line-height: 1.7;
+        white-space: pre-wrap;
+    }
+
+    .countdown-card { background: linear-gradient(135deg, rgba(79,70,229,0.05), rgba(124,58,237,0.05)); }
+
+    .countdown-content { display: flex; align-items: center; gap: 1.5rem; }
+
+    .countdown-icon { font-size: 2.5rem; }
+
+    .countdown-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.25rem;
+    }
+
+    .countdown-time {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-item { display: flex; flex-direction: column; gap: 0.25rem; }
+
+    .info-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .info-value { font-size: 1rem; color: var(--gray-800); font-weight: 500; }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-primary { background: var(--primary); color: white; }
+    .badge-warning { background: var(--warning); color: white; }
+    .badge-gray { background: var(--gray-300); color: var(--gray-700); }
+    .badge-success { background: var(--success); color: white; }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: var(--radius-lg, 12px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900, #111);
+        margin: 0 0 1rem 0;
+    }
+
+    .modal-description {
+        color: var(--gray-600, #666);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    .alert-error {
+        padding: 0.75rem 1rem;
+        background: #FEE2E2;
+        color: #991B1B;
+        border-radius: var(--radius);
+        border-left: 4px solid var(--danger);
+    }
+
+    @@media (max-width: 640px) {
+        .meetup-header { flex-direction: column; }
+        .meetup-actions { width: 100%; }
+    }
+</style>
+
+@code {
+    [Parameter] public string MeetupId { get; set; } = "";
+
+    private Meetup? meetup;
+    private bool loading = true;
+    private bool isCreator = false;
+    private string currentUserId = "";
+
+    // Delete modal state (Blazor, not JS)
+    private bool showDeleteModal = false;
+    private bool isDeleting = false;
+    private string deleteError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        // FIX: Capture current user ID so we can compare with meetup creator
+        currentUserId = principal
+            .FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        Console.WriteLine($"MeetupDetail: current user uid = {currentUserId}");
+
+        try
+        {
+            meetup = await FirestoreService.GetMeetupByIdAsync(MeetupId);
+
+            if (meetup != null)
+            {
+                // FIX: Determine if the logged-in user is the creator
+                isCreator = meetup.CreatorUserId == currentUserId;
+                Console.WriteLine($"MeetupDetail: creator={meetup.CreatorUserId}, isCreator={isCreator}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MeetupDetail: Error - {ex.Message}");
+            meetup = null;
+        }
+
+        loading = false;
+    }
+
+    private void ShowDeleteModal() => showDeleteModal = true;
+    private void HideDeleteModal()
+    {
+        showDeleteModal = false;
+        deleteError = "";
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (meetup == null || !isCreator) return;
+
+        isDeleting = true;
+        deleteError = "";
+
+        try
+        {
+            var success = await MeetupService.DeleteMeetupAsync(MeetupId);
+            if (success)
+            {
+                Nav.NavigateTo("/meetups");
+            }
+            else
+            {
+                deleteError = "Failed to delete the meetup. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteError = "An error occurred. Please try again.";
+            Console.WriteLine($"MeetupDetail: Delete error - {ex.Message}");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private bool IsPast() => meetup?.EventDateTime.ToLocalTime() < DateTime.Now;
+    private bool IsToday() => meetup?.EventDateTime.ToLocalTime().Date == DateTime.Today;
+
+    private bool IsSoon()
+    {
+        if (meetup == null) return false;
+        var days = (meetup.EventDateTime.ToLocalTime() - DateTime.Now).TotalDays;
+        return days >= 0 && days <= 7;
+    }
+
+    private string GetCountdown()
+    {
+        if (meetup == null) return "";
+        var t = meetup.EventDateTime.ToLocalTime() - DateTime.Now;
+
+        if (t.TotalDays >= 1) return $"{(int)t.TotalDays} days {t.Hours} hours";
+        if (t.TotalHours >= 1) return $"{(int)t.TotalHours} hours {t.Minutes} minutes";
+        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes} minutes";
+        return "Starting soon!";
+    }
+}

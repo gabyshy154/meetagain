@@ -1,0 +1,686 @@
+@page "/create-meetup"
+@inject MeetupService MeetupService
+@inject FriendService FriendService
+@inject GroupService GroupService
+@inject AvailabilityService AvailabilityService
+@inject NotificationService NotificationService
+@inject AuthService Auth
+@inject CurrentUserAccessor CurrentUserAccessor
+@inject NavigationManager Nav
+
+<div class="max-w-4xl mx-auto">
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Create New Meetup</h2>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error">
+                ⚠️ @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@model" OnValidSubmit="HandleCreate">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-summary" />
+
+            <div class="form-group">
+                <label>Title *</label>
+                <InputText @bind-Value="model.Title"
+                           class="form-control"
+                           placeholder="e.g., Coffee Meetup, Game Night, Study Session" />
+                <ValidationMessage For="@(() => model.Title)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label>Description *</label>
+                <InputTextArea @bind-Value="model.Description"
+                               class="form-control"
+                               placeholder="What's this meetup about? Add any details participants should know..."
+                               rows="4" />
+                <ValidationMessage For="@(() => model.Description)" class="validation-message" />
+            </div>
+
+            <!-- Invite Groups & Friends Section -->
+            @if (isLoadingFriends)
+            {
+                <div style="padding: 1rem; text-align: center; color: var(--gray-600);">
+                    <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                    Loading groups and friends...
+                </div>
+            }
+            else if (groups.Count > 0 || friends.Count > 0)
+            {
+                <!-- Groups Section -->
+                @if (groups.Count > 0)
+                {
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>👥 Invite Groups (Optional)</span>
+                            <small style="color: var(--gray-600); font-weight: normal;">
+                                @selectedGroupIds.Count selected
+                            </small>
+                        </label>
+                        <div class="friends-selector">
+                            @foreach (var group in groups)
+                            {
+                                var capturedGroupId = group.Id;
+                                <div class="friend-checkbox-item">
+                                    <label style="display: flex; align-items: center; cursor: pointer; margin: 0; width: 100%;">
+                                        <input type="checkbox"
+                                               checked="@selectedGroupIds.Contains(capturedGroupId)"
+                                               @onchange="@((ChangeEventArgs e) => ToggleGroupSelection(capturedGroupId, e))"
+                                               style="margin-right: 0.75rem; cursor: pointer;" />
+                                        <div style="display: flex; align-items: center; flex: 1;">
+                                            <div class="friend-avatar-small" style="background: var(--success);">
+                                                @GetGroupInitials(group.Name)
+                                            </div>
+                                            <div style="margin-left: 0.75rem; flex: 1; min-width: 0;">
+                                                <div style="font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    @group.Name
+                                                </div>
+                                                <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                                    @group.MemberCount member@(group.MemberCount != 1 ? "s" : "")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Friends Section -->
+                @if (friends.Count > 0)
+                {
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>👥 Invite Friends (Optional)</span>
+                            <small style="color: var(--gray-600); font-weight: normal;">
+                                @selectedFriendIds.Count selected
+                            </small>
+                        </label>
+                        <div class="friends-selector">
+                            @foreach (var friend in friends)
+                            {
+                                var capturedFriendId = friend.Id;
+                                <div class="friend-checkbox-item">
+                                    <label style="display: flex; align-items: center; cursor: pointer; margin: 0; width: 100%;">
+                                        <input type="checkbox"
+                                               checked="@selectedFriendIds.Contains(capturedFriendId)"
+                                               @onchange="@((ChangeEventArgs e) => ToggleFriendSelection(capturedFriendId, e))"
+                                               style="margin-right: 0.75rem; cursor: pointer;" />
+                                        <div style="display: flex; align-items: center; flex: 1;">
+                                            <div class="friend-avatar-small">
+                                                @GetInitials(friend.Name)
+                                            </div>
+                                            <div style="margin-left: 0.75rem; flex: 1; min-width: 0;">
+                                                <div style="font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    @friend.Name
+                                                </div>
+                                                <div style="font-size: 0.875rem; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    @friend.Email
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                        @if (friends.Count > 3)
+                        {
+                            <div style="margin-top: 0.5rem; text-align: right;">
+                                <button type="button"
+                                        class="btn btn-outline btn-sm"
+                                        @onclick="ToggleSelectAll">
+                                    @(selectedFriendIds.Count == friends.Count ? "Deselect All" : "Select All")
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div style="background: var(--gray-50); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem; text-align: center;">
+                    <p style="color: var(--gray-600); margin: 0;">
+                        👥 No friends or groups yet.
+                        <a href="/friends" style="color: var(--primary); text-decoration: none; font-weight: 600;">Add friends</a> or
+                        <a href="/groups" style="color: var(--primary); text-decoration: none; font-weight: 600;">create groups</a> to invite them!
+                    </p>
+                </div>
+            }
+
+            <!-- Smart Availability Section ─────────────────────────────────────────
+                 Shown as soon as the page loads (creator-only suggestions are useful
+                 even before any friends are selected).                              -->
+            <div class="smart-suggestions-card">
+                <div class="smart-suggestions-header">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        💡 Smart Time Suggestions
+                    </h3>
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            @onclick="FindBestTimes"
+                            disabled="@isFindingTimes">
+                        @if (isFindingTimes)
+                        {
+                            <span class="loading-spinner" style="width: 0.875rem; height: 0.875rem; margin-right: 0.5rem;"></span>
+                        }
+                        🔍 Find Best Times
+                    </button>
+                </div>
+
+                @if (!suggestedTimes.Any() && !isFindingTimes)
+                {
+                    <p style="color: var(--gray-600); margin: 0.75rem 0 0 0;">
+                        Click <strong>Find Best Times</strong> to get suggestions based on everyone's
+                        availability — including yours.
+                        <br />
+                        <small style="color: var(--gray-500); margin-top: 0.4rem; display: block;">
+                            Tip: Save your availability in
+                            <a href="/settings/availability">Availability Settings</a>
+                            for more accurate results.
+                        </small>
+                    </p>
+                }
+                else if (isFindingTimes)
+                {
+                    <div style="text-align: center; padding: 2rem 0;">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto 1rem;"></div>
+                        <p style="color: var(--gray-600); margin: 0;">Analysing availability for all participants…</p>
+                    </div>
+                }
+                else if (suggestedTimes.Any())
+                {
+                    <div style="margin-top: 1rem;">
+                        <p style="color: var(--success); font-weight: 600; margin-bottom: 1rem;">
+                            ✅ Best times based on everyone's availability:
+                        </p>
+
+                        <div class="suggestions-list">
+                            @foreach (var suggestion in suggestedTimes)
+                            {
+                                var captured = suggestion;
+                                <div class="suggestion-item @(selectedSuggestion == captured ? "selected" : "")"
+                                     @onclick="() => SelectSuggestion(captured)">
+                                    <div class="suggestion-content">
+                                        <div>
+                                            <div style="font-weight: 600; color: var(--gray-900); margin-bottom: 0.25rem;">
+                                                @captured.StartTime.ToString("dddd, MMMM dd")
+                                            </div>
+                                            <div style="color: var(--gray-600);">
+                                                @captured.StartTime.ToString("h:mm tt") - @captured.EndTime.ToString("h:mm tt")
+                                            </div>
+                                        </div>
+                                        <div class="suggestion-badge">
+                                            <span class="availability-badge @GetAvailabilityBadgeClass(captured.AvailabilityScore)">
+                                                @captured.AvailabilityScore.ToString("F0")%
+                                            </span>
+                                            <div style="font-size: 0.75rem; color: var(--gray-600); margin-top: 0.25rem;">
+                                                @captured.AvailableParticipants/@captured.TotalParticipants available
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div style="background: var(--gray-50); padding: 0.75rem; border-radius: var(--radius); margin-top: 1rem;">
+                            <small style="color: var(--gray-600);">
+                                💡 Click a suggestion to auto-fill the date and time below, or set them manually.
+                            </small>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div style="margin-top: 1rem; padding: 1rem; background: #FEF3C7; border-radius: var(--radius);">
+                        <p style="color: #92400E; margin: 0; font-weight: 600;">⚠️ No optimal times found</p>
+                        <p style="color: #92400E; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
+                            Try a wider date range or ask participants to update their
+                            <a href="/settings/availability" style="color:#92400E;">availability settings</a>.
+                            You can still set the time manually below.
+                        </p>
+                    </div>
+                }
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date *</label>
+                    <InputDate @bind-Value="model.Date" class="form-control" />
+                    <ValidationMessage For="@(() => model.Date)" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label>Time *</label>
+                    <input type="time"
+                           class="form-control"
+                           value="@timeString"
+                           @onchange="OnTimeChanged" />
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-section">
+                <h3 class="preview-title">📋 Preview</h3>
+                <div class="meetup-preview">
+                    <div class="preview-header">
+                        <strong>@(string.IsNullOrWhiteSpace(model.Title) ? "Meetup Title" : model.Title)</strong>
+                    </div>
+                    <p class="preview-description">
+                        @(string.IsNullOrWhiteSpace(model.Description) ? "Meetup description will appear here..." : model.Description)
+                    </p>
+                    <div class="preview-datetime">
+                        📅 @model.Date.ToString("MMMM dd, yyyy") at @timeString
+                    </div>
+                    @if (selectedGroupIds.Count > 0 || selectedFriendIds.Count > 0)
+                    {
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+                            <div style="font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                                👥 Inviting:
+                            </div>
+
+                            @if (selectedGroupIds.Count > 0)
+                            {
+                                <div style="margin-bottom: 0.5rem;">
+                                    <strong style="color: var(--success);">Groups (@selectedGroupIds.Count):</strong>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                        @foreach (var gid in selectedGroupIds)
+                                        {
+                                            var g = groups.FirstOrDefault(x => x.Id == gid);
+                                            if (g != null)
+                                            {
+                                                <span class="friend-tag" style="background: var(--success);">
+                                                    @g.Name (@g.MemberCount)
+                                                </span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @if (selectedFriendIds.Count > 0)
+                            {
+                                <div>
+                                    <strong style="color: var(--primary);">Individual Friends (@selectedFriendIds.Count):</strong>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                        @foreach (var fid in selectedFriendIds)
+                                        {
+                                            var f = friends.FirstOrDefault(x => x.Id == fid);
+                                            if (f != null)
+                                            {
+                                                <span class="friend-tag">@f.Name</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                        <span>Creating…</span>
+                    }
+                    else
+                    {
+                        <span>✨ Create Meetup</span>
+                    }
+                </button>
+                <a href="/dashboard" class="btn btn-outline">Cancel</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .alert { padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem; }
+    .alert-error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--danger); }
+
+    .validation-summary {
+        background: #FEF2F2; border: 1px solid #FECACA;
+        border-radius: var(--radius); padding: 1rem;
+        margin-bottom: 1.5rem; color: var(--danger);
+    }
+    .validation-message { color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem; display: block; }
+
+    .form-control {
+        width: 100%; padding: 0.75rem;
+        border: 2px solid var(--gray-200); border-radius: var(--radius);
+        font-size: 1rem; transition: all 0.2s ease;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .friends-selector {
+        max-height: 300px; overflow-y: auto;
+        border: 2px solid var(--gray-200); border-radius: var(--radius);
+        padding: 0.5rem; background: white;
+    }
+    .friend-checkbox-item { padding: 0.75rem; border-radius: var(--radius); transition: background 0.2s; }
+    .friend-checkbox-item:hover { background: var(--gray-50); }
+
+    .friend-avatar-small {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: var(--primary); color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 600; font-size: 0.875rem; flex-shrink: 0;
+    }
+    .friend-tag {
+        background: var(--primary); color: white;
+        padding: 0.25rem 0.75rem; border-radius: 1rem;
+        font-size: 0.875rem; font-weight: 500;
+    }
+
+    .preview-section { background: var(--gray-50); padding: 1.5rem; border-radius: var(--radius); margin-bottom: 1.5rem; }
+    .preview-title { font-size: 1rem; font-weight: 600; color: var(--gray-700); margin-bottom: 1rem; }
+    .meetup-preview { background: white; padding: 1.5rem; border-radius: var(--radius); border: 2px solid var(--gray-200); }
+    .preview-header { font-size: 1.25rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.75rem; }
+    .preview-description { color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem; }
+    .preview-datetime { color: var(--primary); font-weight: 600; font-size: 0.875rem; }
+
+    .form-actions { display: flex; gap: 1rem; justify-content: flex-start; }
+
+    .smart-suggestions-card {
+        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+        border: 2px solid var(--primary-light);
+        border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .smart-suggestions-header {
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 0.75rem;
+    }
+    .suggestions-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .suggestion-item {
+        background: white; border: 2px solid var(--gray-200);
+        border-radius: var(--radius); padding: 1rem;
+        cursor: pointer; transition: all 0.2s ease;
+    }
+    .suggestion-item:hover { border-color: var(--primary); transform: translateX(4px); }
+    .suggestion-item.selected { background: var(--primary); border-color: var(--primary); color: white; }
+    .suggestion-item.selected * { color: white !important; }
+
+    .suggestion-content { display: flex; justify-content: space-between; align-items: center; }
+    .suggestion-badge { text-align: right; }
+
+    .availability-badge {
+        display: inline-block; padding: 0.25rem 0.75rem;
+        border-radius: 1rem; font-weight: 600; font-size: 0.875rem;
+    }
+    .availability-badge.high { background: var(--success); color: white; }
+    .availability-badge.medium { background: var(--warning); color: var(--gray-900); }
+    .availability-badge.low { background: var(--danger); color: white; }
+
+    @@media (max-width: 768px) {
+        .form-row { grid-template-columns: 1fr; }
+        .smart-suggestions-header { flex-direction: column; gap: 0.75rem; align-items: stretch; }
+        .suggestion-content { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+        .suggestion-badge { text-align: left; }
+    }
+</style>
+
+@code {
+    private CreateMeetupModel model = new();
+    private string timeString    = "12:00";
+    private string errorMessage  = "";
+    private bool isSubmitting    = false;
+    private bool isLoadingFriends = true;
+
+    private List<Friend>   friends = new();
+    private List<GroupDto> groups  = new();
+    private HashSet<string> selectedFriendIds = new();
+    private HashSet<string> selectedGroupIds  = new();
+
+    // The logged-in user's UID — always included in availability searches
+    private string currentUserId = "";
+
+    // Smart availability
+    private bool isFindingTimes = false;
+    private List<SuggestedTimeSlot> suggestedTimes = new();
+    private SuggestedTimeSlot? selectedSuggestion  = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model.Date = DateTime.Today.AddDays(1);
+        timeString = "12:00";
+        UpdateModelTime();
+
+        // ── Get the current user's UID ────────────────────────────────────────
+        // This is critical — the creator must be included in availability checks.
+        var (uid, _) = await CurrentUserAccessor.GetUserAsync();
+        currentUserId = uid ?? "";
+
+        try
+        {
+            var friendsTask = FriendService.GetFriendsAsync();
+            var groupsTask  = GroupService.GetMyGroupsAsync();
+            await Task.WhenAll(friendsTask, groupsTask);
+
+            friends = await friendsTask;
+            groups  = await groupsTask;
+
+            Console.WriteLine($"Loaded {friends.Count} friends, {groups.Count} groups. Creator: {currentUserId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading friends/groups: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingFriends = false;
+        }
+    }
+
+    private void OnTimeChanged(ChangeEventArgs e)
+    {
+        timeString = e.Value?.ToString() ?? "12:00";
+        UpdateModelTime();
+    }
+
+    private void UpdateModelTime()
+    {
+        if (TimeOnly.TryParse(timeString, out var t))
+            model.Time = t;
+    }
+
+    private void ToggleFriendSelection(string friendId, ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false)) selectedFriendIds.Add(friendId);
+        else selectedFriendIds.Remove(friendId);
+
+        suggestedTimes.Clear();
+        selectedSuggestion = null;
+    }
+
+    private void ToggleGroupSelection(string groupId, ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false)) selectedGroupIds.Add(groupId);
+        else selectedGroupIds.Remove(groupId);
+
+        suggestedTimes.Clear();
+        selectedSuggestion = null;
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (selectedFriendIds.Count == friends.Count)
+            selectedFriendIds.Clear();
+        else
+            selectedFriendIds = friends.Select(f => f.Id).ToHashSet();
+
+        suggestedTimes.Clear();
+        selectedSuggestion = null;
+    }
+
+    // ── Build the full participant list including the CREATOR ─────────────────────
+    private List<string> GetAllParticipantsForAvailability()
+    {
+        var all = new HashSet<string>();
+
+        // ✅ Always include the meetup creator (current user)
+        if (!string.IsNullOrEmpty(currentUserId))
+            all.Add(currentUserId);
+
+        // Selected individual friends
+        foreach (var fid in selectedFriendIds)
+            all.Add(fid);
+
+        // Members from selected groups
+        foreach (var gid in selectedGroupIds)
+        {
+            var group = groups.FirstOrDefault(g => g.Id == gid);
+            if (group == null) continue;
+            foreach (var member in group.Members)
+                all.Add(member.UserId);
+        }
+
+        return all.ToList();
+    }
+
+    // ── Find best times ───────────────────────────────────────────────────────────
+    private async Task FindBestTimes()
+    {
+        isFindingTimes = true;
+        suggestedTimes.Clear();
+        errorMessage = "";
+
+        try
+        {
+            var participants = GetAllParticipantsForAvailability();
+            Console.WriteLine($"Searching availability for {participants.Count} participant(s): [{string.Join(", ", participants)}]");
+
+            if (participants.Count == 0)
+            {
+                errorMessage = "Could not determine the current user. Please refresh and try again.";
+                return;
+            }
+
+            // For group participants whose Members list may be empty (GroupDto not fully loaded),
+            // fall back to fetching member IDs from the service.
+            foreach (var gid in selectedGroupIds)
+            {
+                var group = groups.FirstOrDefault(g => g.Id == gid);
+                if (group != null && group.Members.Count == 0)
+                {
+                    var memberIds = await GroupService.GetGroupMemberIdsAsync(gid);
+                    foreach (var mid in memberIds)
+                        if (!participants.Contains(mid))
+                            participants.Add(mid);
+                }
+            }
+
+            var startDate = DateTime.Today;
+            var endDate   = DateTime.Today.AddDays(14); // 2-week look-ahead
+
+            suggestedTimes = await AvailabilityService.FindBestMeetupTimesAsync(
+                participants,
+                startDate,
+                endDate,
+                durationMinutes: 120,
+                maxSuggestions: 5);
+
+            Console.WriteLine($"Got {suggestedTimes.Count} suggestion(s)");
+
+            if (suggestedTimes.Count == 0)
+                errorMessage = "No common times found in the next 2 weeks. " +
+                               "Try asking participants to update their availability, or set the time manually.";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"FindBestTimes error: {ex}");
+            errorMessage = $"Error analysing availability: {ex.Message}";
+        }
+        finally
+        {
+            isFindingTimes = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectSuggestion(SuggestedTimeSlot suggestion)
+    {
+        selectedSuggestion = suggestion;
+        model.Date  = suggestion.StartTime.Date;
+        model.Time  = TimeOnly.FromDateTime(suggestion.StartTime);
+        timeString  = model.Time.ToString("HH:mm");
+        Console.WriteLine($"Selected: {suggestion.StartTime}");
+    }
+
+    private string GetAvailabilityBadgeClass(double score) =>
+        score >= 80 ? "high" : score >= 60 ? "medium" : "low";
+
+    // ── Create the meetup ─────────────────────────────────────────────────────────
+    private async Task HandleCreate()
+    {
+        isSubmitting = true;
+        errorMessage = "";
+
+        try
+        {
+            UpdateModelTime();
+
+            // Combine individually selected friends + group members for invites.
+            // Note: the creator is NOT invited — they are the creator.
+            var inviteIds = new HashSet<string>(selectedFriendIds);
+
+            foreach (var gid in selectedGroupIds)
+            {
+                var memberIds = await GroupService.GetGroupMemberIdsAsync(gid);
+                foreach (var mid in memberIds)
+                {
+                    // Don't invite the creator as a participant
+                    if (mid != currentUserId)
+                        inviteIds.Add(mid);
+                }
+            }
+
+            Console.WriteLine($"Creating meetup — inviting {inviteIds.Count} people");
+
+            var success = await MeetupService.CreateMeetupAsync(model, inviteIds.ToList());
+
+            if (success)
+                Nav.NavigateTo("/meetups", forceLoad: false);
+            else
+                errorMessage = "Failed to create meetup. Please try again.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            Console.WriteLine($"HandleCreate error: {ex}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1
+            ? parts[0][0].ToString().ToUpper()
+            : $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
+    private string GetGroupInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "G";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "G";
+        return parts.Length == 1
+            ? parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper()
+            : $"{parts[0][0]}{parts[1][0]}".ToUpper();
+    }
+}

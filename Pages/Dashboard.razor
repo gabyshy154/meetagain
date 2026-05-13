@@ -1,0 +1,493 @@
+@page "/dashboard"
+@using Google.Cloud.Firestore
+@using MeetAgain.Server.Models
+@using MeetAgain.Server.Services
+@inject MeetupService MeetupService
+@inject FriendService FriendService
+@inject GroupService GroupService
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@inject FirestoreDb FirestoreDb
+
+<PageTitle>Dashboard - MeetAgain</PageTitle>
+
+@if (loading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 1rem; color: var(--gray-600);">Loading your dashboard...</p>
+    </div>
+}
+else
+{
+    <!-- Welcome Section -->
+    <div class="welcome-section fade-in">
+        <h1>Welcome back, @displayName! 👋</h1>
+        <p>Here's what's happening with your meetups and connections</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid fade-in">
+        <div class="stat-card upcoming">
+            <div class="stat-label">Upcoming Meetups</div>
+            <div class="stat-value">@upcoming.Count</div>
+            <div class="stat-description">
+                @if (upcoming.Any())
+                {
+                    <span>Next: @upcoming.First().EventDateTime.ToLocalTime().ToString("MMM dd")</span>
+                }
+                else
+                {
+                    <span>No meetups scheduled</span>
+                }
+            </div>
+        </div>
+
+        <div class="stat-card friends">
+            <div class="stat-label">Friends</div>
+            <div class="stat-value">@friendCount</div>
+            <div class="stat-description">Active connections</div>
+        </div>
+
+        <div class="stat-card groups">
+            <div class="stat-label">Groups</div>
+            <div class="stat-value">@groupCount</div>
+            <div class="stat-description">Communities you're part of</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Total Meetups</div>
+            <div class="stat-value">@meetups.Count</div>
+            <div class="stat-description">All time</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Quick Actions</h2>
+        </div>
+        <div class="flex space-x-4">
+            <a href="/create-meetup" class="btn btn-primary">
+                ➕ Create Meetup
+            </a>
+            <a href="/friends" class="btn btn-secondary">
+                👥 Manage Friends
+            </a>
+            <a href="/groups" class="btn btn-outline">
+                👨‍👩‍👧‍👦 View Groups
+            </a>
+        </div>
+    </div>
+
+    <!-- Upcoming Meetups Section -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Upcoming Meetups</h2>
+            @if (upcoming.Any())
+            {
+                <a href="/meetups" style="color: var(--primary); font-weight: 600; font-size: 0.875rem; text-decoration: none;">
+                    View All →
+                </a>
+            }
+        </div>
+
+        @if (!upcoming.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h3 class="empty-state-title">No Upcoming Meetups</h3>
+                <p class="empty-state-description">
+                    Create your first meetup and start connecting with friends!
+                </p>
+                <a href="/create-meetup" class="btn btn-primary">
+                    Create Your First Meetup
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var meetup in upcoming.Take(5))
+                {
+                    <a href="/meetups" class="meetup-card" style="text-decoration: none; color: inherit; display: block;">
+                        <div class="meetup-title">@meetup.Title</div>
+                        @if (!string.IsNullOrEmpty(meetup.Description))
+                        {
+                            <p style="color: var(--gray-600); font-size: 0.875rem; margin-top: 0.25rem;">
+                                @(meetup.Description.Length > 100
+                                    ? meetup.Description.Substring(0, 100) + "..."
+                                    : meetup.Description)
+                            </p>
+                        }
+                        <div class="meetup-date">
+                            @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                        </div>
+                        <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                            @if (meetup.IsCreator)
+                            {
+                                <span class="badge badge-success">Created by you</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-primary">Invited</span>
+                            }
+                            @if (!string.IsNullOrEmpty(meetup.MyRSVPStatus))
+                            {
+                                <span class="badge badge-gray">@meetup.MyRSVPStatus</span>
+                            }
+                        </div>
+                    </a>
+                }
+            </div>
+
+            @if (upcoming.Count > 5)
+            {
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="/meetups" class="btn btn-outline btn-sm">
+                        View All @upcoming.Count Meetups
+                    </a>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- ── Past Meetups ─────────────────────────────────────────────────────── -->
+    @if (past.Any())
+    {
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title">Recent Past Meetups</h2>
+                <span style="font-size: 0.8rem; color: var(--gray-500);">
+                    Only you (the creator) can delete your past meetups
+                </span>
+            </div>
+
+            <!-- Global feedback banner -->
+            @if (!string.IsNullOrEmpty(deleteMessage))
+            {
+                <div class="alert-banner @(deleteSuccess ? "alert-banner-success" : "alert-banner-error")">
+                    @(deleteSuccess ? "✅" : "⚠️") @deleteMessage
+                </div>
+            }
+
+            <div class="space-y-3">
+                @foreach (var meetup in past.Take(5))
+                {
+                    var isPending = deletingMeetupId == meetup.Id;
+
+                    <div class="meetup-card past-meetup-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+
+                            <!-- Left: meetup info -->
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="meetup-title" style="color: var(--gray-700);">@meetup.Title</div>
+                                @if (!string.IsNullOrEmpty(meetup.Description))
+                                {
+                                    <p style="color: var(--gray-500); font-size: 0.875rem; margin-top: 0.25rem;">
+                                        @(meetup.Description.Length > 80
+                                            ? meetup.Description.Substring(0, 80) + "..."
+                                            : meetup.Description)
+                                    </p>
+                                }
+                                <div class="meetup-date" style="color: var(--gray-500);">
+                                    @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                                </div>
+                                <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                    <span class="badge badge-gray-light">✓ Completed</span>
+                                    @if (meetup.IsCreator)
+                                    {
+                                        <span class="badge badge-success">Your meetup</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-primary">Attended</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Right: delete button (creator only) -->
+                            @if (meetup.IsCreator)
+                            {
+                                <div style="flex-shrink: 0;">
+                                    @if (confirmDeleteId == meetup.Id)
+                                    {
+                                        <!-- Confirmation prompt -->
+                                        <div class="confirm-delete-box">
+                                            <p style="font-size: 0.8rem; color: var(--gray-700); margin: 0 0 0.5rem 0; font-weight: 600;">
+                                                Delete this meetup?
+                                            </p>
+                                            <div style="display: flex; gap: 0.5rem;">
+                                                <button class="btn btn-danger btn-sm"
+                                                        disabled="@isPending"
+                                                        @onclick="() => ConfirmDelete(meetup.Id)">
+                                                    @if (isPending)
+                                                    {
+                                                        <span class="spinner-inline"></span>
+                                                    }
+                                                    Yes, Delete
+                                                </button>
+                                                <button class="btn btn-outline btn-sm"
+                                                        disabled="@isPending"
+                                                        @onclick="CancelDelete">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                title="Delete this past meetup"
+                                                @onclick="() => RequestDelete(meetup.Id)">
+                                            🗑 Delete
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (past.Count > 5)
+            {
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="/meetups" class="btn btn-outline btn-sm">
+                        View All @past.Count Past Meetups
+                    </a>
+                </div>
+            }
+        </div>
+    }
+}
+
+<style>
+    a.btn {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ── Badges ────────────────────────────────────────────────────────────── */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+    }
+    .badge-success   { background: var(--success);  color: white; }
+    .badge-primary   { background: var(--primary);  color: white; }
+    .badge-gray      { background: var(--gray-600); color: white; }
+    .badge-gray-light{ background: var(--gray-300); color: var(--gray-700); }
+
+    /* ── Past meetup card ──────────────────────────────────────────────────── */
+    .past-meetup-card { opacity: 0.9; transition: opacity 0.2s; }
+    .past-meetup-card:hover { opacity: 1; }
+
+    /* ── Delete confirmation box ───────────────────────────────────────────── */
+    .confirm-delete-box {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-radius: var(--radius);
+        padding: 0.75rem;
+        min-width: 160px;
+    }
+
+    /* ── Danger button variants ────────────────────────────────────────────── */
+    .btn-danger {
+        background: var(--danger);
+        color: white;
+        border: 2px solid var(--danger);
+    }
+    .btn-danger:hover:not(:disabled) {
+        background: #B91C1C;
+        border-color: #B91C1C;
+    }
+    .btn-outline-danger {
+        background: transparent;
+        color: var(--danger);
+        border: 2px solid var(--danger);
+    }
+    .btn-outline-danger:hover:not(:disabled) {
+        background: #FEF2F2;
+    }
+
+    /* ── Feedback banner ───────────────────────────────────────────────────── */
+    .alert-banner {
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius);
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .alert-banner-success { background: #D1FAE5; color: #065F46; border-left: 4px solid var(--success); }
+    .alert-banner-error   { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--danger); }
+
+    /* ── Inline spinner ────────────────────────────────────────────────────── */
+    .spinner-inline {
+        display: inline-block;
+        width: 0.75rem;
+        height: 0.75rem;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 0.35rem;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@code {
+    private List<MeetupDto> meetups  = new();
+    private List<MeetupDto> upcoming = new();
+    private List<MeetupDto> past     = new();
+
+    private int    friendCount  = 0;
+    private int    groupCount   = 0;
+    private string displayName  = "User";
+    private bool   loading      = true;
+
+    // Delete state
+    private string? confirmDeleteId   = null;   // meetup awaiting confirmation
+    private string? deletingMeetupId  = null;   // meetup currently being deleted
+    private string  deleteMessage     = "";
+    private bool    deleteSuccess     = false;
+
+    // ── Step 1: user clicks "🗑 Delete" ───────────────────────────────────────
+    private void RequestDelete(string meetupId)
+    {
+        confirmDeleteId = meetupId;
+        deleteMessage   = "";
+    }
+
+    private void CancelDelete()
+    {
+        confirmDeleteId = null;
+    }
+
+    // ── Step 2: user confirms ─────────────────────────────────────────────────
+    private async Task ConfirmDelete(string meetupId)
+    {
+        deletingMeetupId = meetupId;
+        confirmDeleteId  = null;
+        deleteMessage    = "";
+
+        try
+        {
+            var success = await MeetupService.DeleteMeetupAsync(meetupId);
+
+            if (success)
+            {
+                // Remove from local lists so the UI updates instantly
+                var removed = meetups.FirstOrDefault(m => m.Id == meetupId);
+                if (removed != null)
+                {
+                    meetups.Remove(removed);
+                    past.Remove(removed);
+                }
+
+                deleteSuccess = true;
+                deleteMessage = $"'{removed?.Title ?? "Meetup"}' was deleted successfully.";
+            }
+            else
+            {
+                deleteSuccess = false;
+                deleteMessage = "Could not delete the meetup. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Delete error: {ex.Message}");
+            deleteSuccess = false;
+            deleteMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            deletingMeetupId = null;
+            StateHasChanged();
+        }
+
+        // Auto-clear success message after 4 seconds
+        if (deleteSuccess)
+        {
+            await Task.Delay(4000);
+            deleteMessage = "";
+            StateHasChanged();
+        }
+    }
+
+    // ── Initialization ────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Console.WriteLine("=== Dashboard Initialization Started ===");
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            if (principal?.Identity?.IsAuthenticated != true)
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            var userId = principal.FindFirst(c => c.Type == "user_id")?.Value
+                      ?? principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? principal.FindFirst(c => c.Type == "sub")?.Value;
+
+            Console.WriteLine($"Dashboard userId = {userId}");
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                try
+                {
+                    var userDoc = await FirestoreDb.Collection("users").Document(userId).GetSnapshotAsync();
+                    if (userDoc.Exists)
+                    {
+                        var userData = userDoc.ToDictionary();
+                        if (userData.TryGetValue("DisplayName", out var dn) && !string.IsNullOrWhiteSpace(dn?.ToString()))
+                            displayName = dn.ToString()!;
+                        else if (userData.TryGetValue("Email", out var em) && !string.IsNullOrWhiteSpace(em?.ToString()))
+                            displayName = em.ToString()!;
+                    }
+                    else
+                    {
+                        displayName = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "User";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading user doc: {ex.Message}");
+                    displayName = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "User";
+                }
+            }
+
+            meetups = await MeetupService.GetMyMeetupsAsync() ?? new();
+
+            try { friendCount = (await FriendService.GetFriendsAsync())?.Count ?? 0; }
+            catch { friendCount = 0; }
+
+            try { groupCount = (await GroupService.GetMyGroupsAsync())?.Count ?? 0; }
+            catch { groupCount = 0; }
+
+            var now = DateTime.Now;
+            upcoming = meetups.Where(m => m.EventDateTime.ToLocalTime() > now).OrderBy(m => m.EventDateTime).ToList();
+            past     = meetups.Where(m => m.EventDateTime.ToLocalTime() <= now).OrderByDescending(m => m.EventDateTime).ToList();
+
+            Console.WriteLine($"Dashboard ready — {upcoming.Count} upcoming, {past.Count} past");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard FATAL: {ex.Message}");
+            displayName = "User";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

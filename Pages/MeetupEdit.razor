@@ -1,0 +1,184 @@
+@page "/meetups/{MeetupId}/edit"
+@inject MeetupService MeetupService
+@inject FirestoreService FirestoreService
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="max-w-4xl mx-auto">
+    @if (loading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 1rem; color: var(--gray-600);">Loading meetup details…</p>
+        </div>
+    }
+    else if (meetup == null)
+    {
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">❌</div>
+                <h3 class="empty-state-title">Meetup Not Found</h3>
+                <p class="empty-state-description">
+                    This meetup doesn't exist or you don't have permission to edit it.
+                </p>
+                <a href="/meetups" class="btn btn-primary">Back to Meetups</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card fade-in">
+            <div class="meetup-header">
+                <div class="meetup-header-content">
+                    <a href="/meetups/@MeetupId" class="btn-back">← Back to Details</a>
+                    <h1 class="meetup-detail-title">Edit Meetup</h1>
+                </div>
+            </div>
+
+            <EditForm Model="meetup" OnValidSubmit="SaveChanges">
+                <div class="form-group">
+                    <label>Title</label>
+                    <InputText class="form-input" @bind-Value="meetup.Title" />
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <InputTextArea class="form-input" @bind-Value="meetup.Description" />
+                </div>
+
+                <div class="form-group">
+                    <label>Date</label>
+                    <InputDate class="form-input" @bind-Value="meetup.EventDateTime" />
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary">Save Changes</button>
+
+                    <button type="button"
+                            onclick="showDeleteModal()"
+                            class="btn btn-outline"
+                            style="color: var(--danger); border-color: var(--danger);">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3 class="modal-title">Delete Meetup?</h3>
+
+        <p class="modal-description">
+            Are you sure you want to delete "<strong>@meetup?.Title</strong>"?
+            This cannot be undone.
+        </p>
+
+        <div class="modal-actions">
+            <button type="button"
+                    class="btn btn-outline"
+                    onclick="hideDeleteModal()">
+                Cancel
+            </button>
+
+            <button type="button"
+                    class="btn btn-primary"
+                    id="confirmDeleteBtn"
+                    style="background: var(--danger);"
+                    onclick="confirmDeleteMeetup('@MeetupId')">
+                Delete Meetup
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: var(--radius-lg, 12px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 500px;
+        width: 90%;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900, #111);
+        margin: 0 0 1rem 0;
+    }
+
+    .modal-description {
+        color: var(--gray-600, #666);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+</style>
+
+@code {
+    [Parameter] public string MeetupId { get; set; } = "";
+
+    private Meetup? meetup;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        var uid = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        Console.WriteLine($"EditMeetup: user uid from claims = {uid}");
+
+        try
+        {
+            meetup = await FirestoreService.GetMeetupByIdAsync(MeetupId);
+
+            // Optional: if you only want the creator to edit:
+            // if (meetup != null && meetup.CreatorUserId != uid)
+            //     meetup = null;
+        }
+        catch
+        {
+            meetup = null;
+        }
+
+        loading = false;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (meetup == null) return;
+
+        await MeetupService.UpdateMeetupAsync(meetup);
+        Nav.NavigateTo($"/meetups/{MeetupId}");
+    }
+}

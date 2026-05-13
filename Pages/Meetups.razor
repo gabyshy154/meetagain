@@ -1,0 +1,500 @@
+@page "/meetups"
+@inject MeetupService MeetupService
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="max-w-4xl mx-auto">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">My Meetups</h2>
+            <p class="page-subtitle">View and manage all your scheduled meetups</p>
+        </div>
+        <a href="/create-meetup" class="btn btn-primary" style="text-decoration: none;">
+            ➕ New Meetup
+        </a>
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 1rem; color: var(--gray-600);">Loading meetups...</p>
+        </div>
+    }
+    else if (meetups == null || !meetups.Any())
+    {
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h3 class="empty-state-title">No Meetups Yet</h3>
+                <p class="empty-state-description">
+                    Get started by creating your first meetup with friends!
+                </p>
+                <a href="/create-meetup" class="btn btn-primary" style="text-decoration: none;">
+                    Create Your First Meetup
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- FIX: Filter tabs use @onclick + Blazor state — no page reloads -->
+        <div class="filter-tabs">
+            <button type="button"
+                    class="filter-tab @(activeFilter == "all" ? "active" : "")"
+                    @onclick='() => SetFilter("all")'>
+                All (@meetups.Count)
+            </button>
+            <button type="button"
+                    class="filter-tab @(activeFilter == "upcoming" ? "active" : "")"
+                    @onclick='() => SetFilter("upcoming")'>
+                Upcoming (@upcomingMeetups.Count)
+            </button>
+            <button type="button"
+                    class="filter-tab @(activeFilter == "past" ? "active" : "")"
+                    @onclick='() => SetFilter("past")'>
+                Past (@pastMeetups.Count)
+            </button>
+        </div>
+
+        <div class="meetups-container">
+            @foreach (var meetup in GetFilteredMeetups())
+            {
+                <div class="meetup-item @(IsPast(meetup) ? "past" : "")">
+                    <!-- Clickable area -->
+                    <a href="/meetups/@meetup.Id" class="meetup-item-link" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="meetup-item-content">
+                            <div class="meetup-item-header">
+                                <h3 class="meetup-item-title">@meetup.Title</h3>
+                                <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                    @if (IsPast(meetup))
+                                    {
+                                        <span class="badge badge-gray">Past</span>
+                                    }
+                                    else if (IsToday(meetup))
+                                    {
+                                        <span class="badge badge-warning">Today</span>
+                                    }
+                                    else if (IsSoon(meetup))
+                                    {
+                                        <span class="badge badge-primary">Soon</span>
+                                    }
+                                    @* FIX: Show "Organizer" badge for the creator *@
+                                    @if (meetup.IsCreator)
+                                    {
+                                        <span class="badge" style="background: #EDE9FE; color: #5B21B6;">Organizer</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <p class="meetup-item-description">
+                                @(meetup.Description.Length > 150
+                                    ? meetup.Description.Substring(0, 150) + "..."
+                                    : meetup.Description)
+                            </p>
+
+                            <div class="meetup-item-footer">
+                                <span class="meetup-item-date">
+                                    📅 @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy")
+                                </span>
+                                <span class="meetup-item-time">
+                                    🕐 @meetup.EventDateTime.ToLocalTime().ToString("h:mm tt")
+                                </span>
+                                @if (!IsPast(meetup))
+                                {
+                                    <span class="meetup-item-countdown">
+                                        @GetCountdown(meetup)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </a>
+
+                    @* FIX: Only show edit/delete actions if current user is the creator *@
+                    @if (meetup.IsCreator)
+                    {
+                        <div class="meetup-item-actions">
+                            @if (!IsPast(meetup))
+                            {
+                                <a href="/meetups/@meetup.Id/edit" class="btn-icon" title="Edit meetup" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">
+                                    ✏️
+                                </a>
+                            }
+                            <button class="btn-icon"
+                                    title="Delete meetup"
+                                    @onclick="() => ShowDeleteConfirm(meetup)"
+                                    style="color: var(--danger);">
+                                🗑️
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (meetupToDelete != null)
+{
+    <div class="modal-overlay" @onclick="HideDeleteConfirm">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h3 class="modal-title">Delete Meetup?</h3>
+            <p class="modal-description">
+                Are you sure you want to delete "<strong>@meetupToDelete.Title</strong>"?
+                This action cannot be undone.
+            </p>
+
+            @if (!string.IsNullOrEmpty(deleteError))
+            {
+                <div class="alert-error" style="margin-bottom: 1rem; padding: 0.75rem; border-radius: var(--radius);">
+                    ⚠️ @deleteError
+                </div>
+            }
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" @onclick="HideDeleteConfirm" disabled="@isDeleting">
+                    Cancel
+                </button>
+                <button type="button"
+                        class="btn btn-primary"
+                        style="background: var(--danger);"
+                        @onclick="ConfirmDelete"
+                        disabled="@isDeleting">
+                    @if (isDeleting)
+                    {
+                        <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <span>Delete Meetup</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+    }
+
+    .page-subtitle { color: var(--gray-600); font-size: 1rem; }
+
+    .filter-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--gray-200);
+    }
+
+    .filter-tab {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        color: var(--gray-600);
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
+
+    .filter-tab:hover { color: var(--primary); }
+
+    .filter-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .meetups-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    /* FIX: meetup-item is now a flex row (link area + action buttons) */
+    .meetup-item {
+        background: white;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .meetup-item:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .meetup-item.past {
+        opacity: 0.7;
+        background: var(--gray-50);
+    }
+
+    .meetup-item-link { flex: 1; display: block; }
+
+    .meetup-item-content { flex: 1; }
+
+    .meetup-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .meetup-item-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-primary { background: var(--primary); color: white; }
+    .badge-warning  { background: var(--warning);  color: white; }
+    .badge-gray     { background: var(--gray-300);  color: var(--gray-700); }
+
+    .meetup-item-description {
+        color: var(--gray-600);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .meetup-item-footer {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+    }
+
+    .meetup-item-countdown { color: var(--primary); font-weight: 600; }
+
+    .meetup-item-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .btn-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: none;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 1.125rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-icon:hover {
+        background: var(--gray-200);
+        transform: scale(1.1);
+    }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: var(--radius-lg, 12px);
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0 0 1rem 0;
+    }
+
+    .modal-description {
+        color: var(--gray-600);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    .alert-error {
+        background: #FEE2E2;
+        color: #991B1B;
+        border-left: 4px solid var(--danger);
+    }
+
+    @@media (max-width: 768px) {
+        .page-header { flex-direction: column; gap: 1rem; }
+        .meetup-item { flex-direction: column; }
+        .meetup-item-actions { flex-direction: row; }
+    }
+</style>
+
+@code {
+    private List<MeetupDto>? meetups;
+    private List<MeetupDto> upcomingMeetups = new();
+    private List<MeetupDto> pastMeetups = new();
+    private string activeFilter = "all";
+    private bool loading = true;
+
+    // Delete modal state
+    private MeetupDto? meetupToDelete;
+    private bool isDeleting = false;
+    private string deleteError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            if (principal?.Identity?.IsAuthenticated != true)
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            await LoadMeetups();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Meetups: Error loading - {ex.Message}");
+            meetups = new List<MeetupDto>();
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadMeetups()
+    {
+        meetups = await MeetupService.GetMyMeetupsAsync() ?? new List<MeetupDto>();
+        meetups = meetups.OrderBy(m => m.EventDateTime).ToList();
+
+        var now = DateTime.Now;
+        upcomingMeetups = meetups.Where(m => m.EventDateTime.ToLocalTime() > now).ToList();
+        pastMeetups     = meetups.Where(m => m.EventDateTime.ToLocalTime() <= now).ToList();
+
+        Console.WriteLine($"Meetups: {upcomingMeetups.Count} upcoming, {pastMeetups.Count} past");
+    }
+
+    // FIX: Simple Blazor state method — no page reload
+    private void SetFilter(string filter)
+    {
+        activeFilter = filter;
+    }
+
+    private void ShowDeleteConfirm(MeetupDto meetup)
+    {
+        meetupToDelete = meetup;
+        deleteError = "";
+    }
+
+    private void HideDeleteConfirm()
+    {
+        meetupToDelete = null;
+        deleteError = "";
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (meetupToDelete == null) return;
+
+        isDeleting = true;
+        deleteError = "";
+
+        try
+        {
+            var success = await MeetupService.DeleteMeetupAsync(meetupToDelete.Id);
+            if (success)
+            {
+                HideDeleteConfirm();
+                await LoadMeetups(); // Refresh the list in-place
+            }
+            else
+            {
+                deleteError = "Failed to delete meetup. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteError = "An error occurred. Please try again.";
+            Console.WriteLine($"Meetups: Delete error - {ex.Message}");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private List<MeetupDto> GetFilteredMeetups() => activeFilter switch
+    {
+        "upcoming" => upcomingMeetups,
+        "past"     => pastMeetups,
+        _          => meetups ?? new List<MeetupDto>()
+    };
+
+    private bool IsPast(MeetupDto meetup)   => meetup.EventDateTime.ToLocalTime() < DateTime.Now;
+    private bool IsToday(MeetupDto meetup)  => meetup.EventDateTime.ToLocalTime().Date == DateTime.Today;
+
+    private bool IsSoon(MeetupDto meetup)
+    {
+        var days = (meetup.EventDateTime.ToLocalTime() - DateTime.Now).TotalDays;
+        return days >= 0 && days <= 7;
+    }
+
+    private string GetCountdown(MeetupDto meetup)
+    {
+        var t = meetup.EventDateTime.ToLocalTime() - DateTime.Now;
+        if (t.TotalDays  >= 1) return $"in {(int)t.TotalDays} day{((int)t.TotalDays != 1 ? "s" : "")}";
+        if (t.TotalHours >= 1) return $"in {(int)t.TotalHours} hour{((int)t.TotalHours != 1 ? "s" : "")}";
+        return "starting soon";
+    }
+}
