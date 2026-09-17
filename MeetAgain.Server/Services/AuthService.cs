@@ -4,15 +4,16 @@ using MeetAgain.Server.Models;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using System;
 
 namespace MeetAgain.Server.Services
 {
     public class AuthService
     {
-        private readonly FirestoreService _fs;
-        private readonly HttpClient _http = new();
-        private readonly string _apiKey;
+private readonly FirestoreService _fs;
+private readonly HttpClient _http = new();
+private readonly string _apiKey;
 
         public AppUser? CurrentUser { get; private set; }
         public string? UserId => CurrentUser?.Uid;
@@ -24,12 +25,11 @@ namespace MeetAgain.Server.Services
         // -----------------------------
         public string? LastFirebaseError { get; private set; }
 
-        public AuthService(FirestoreService fs, string firebaseApiKey)
-        {
-            _fs = fs ?? throw new ArgumentNullException(nameof(fs));
-            _apiKey = firebaseApiKey ?? throw new ArgumentNullException(nameof(firebaseApiKey));
-        }
-
+public AuthService(FirestoreService fs, string firebaseApiKey)
+{
+    _fs = fs ?? throw new ArgumentNullException(nameof(fs));
+    _apiKey = firebaseApiKey ?? throw new ArgumentNullException(nameof(firebaseApiKey));
+}
 // ------------------------------------------------------
 // REGISTER
 // ------------------------------------------------------
@@ -167,14 +167,20 @@ public async Task<bool> SignUpAsync(string email, string password, string displa
         // LOGOUT
         // ------------------------------------------------------
         public async Task LogoutAsync()
-        {
-            CurrentUser = null;
-            if (AuthStateProvider != null)
-                await AuthStateProvider.SetTokenAsync(null);
+{
+    Console.WriteLine("LogoutAsync CALLED");
 
-            LastFirebaseError = null;
-            Console.WriteLine("User logged out.");
-        }
+    CurrentUser = null;
+    if (AuthStateProvider != null)
+        await AuthStateProvider.SetTokenAsync(null);
+
+    LastFirebaseError = null;
+    Console.WriteLine("User logged out.");
+}
+
+
+
+
 
         // ------------------------------------------------------
         // REQUIRED BY PAGES

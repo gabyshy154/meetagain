@@ -1,6 +1,7 @@
 @page "/"
 @inject NavigationManager Nav
 @inject AuthService Auth
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="landing-container">
     <!-- Hero Section -->
@@ -167,17 +168,20 @@
         }
     }
 </style>
-
 @code {
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var user = await Auth.GetCurrentUserAsync();
-            if (user != null)
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            if (principal?.Identity?.IsAuthenticated == true)
             {
+                // Already logged in → go straight to dashboard
                 Nav.NavigateTo("/dashboard", true);
             }
+            // If not authenticated, do nothing: stay on welcome page
         }
         catch (Exception ex)
         {

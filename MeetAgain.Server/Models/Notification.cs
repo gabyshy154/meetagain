@@ -1,4 +1,3 @@
-using MeetAgain.Server.Models;
 using Google.Cloud.Firestore;
 
 namespace MeetAgain.Server.Models
@@ -11,5 +10,10 @@ namespace MeetAgain.Server.Models
         [FirestoreProperty] public string Message { get; set; } = "";
         [FirestoreProperty] public string CreatedAt { get; set; } = "";
         [FirestoreProperty] public bool IsRead { get; set; } = false;
+        
+        // Optional metadata fields
+        [FirestoreProperty] public string MeetupId { get; set; } = "";
+        [FirestoreProperty] public string FriendRequestId { get; set; } = "";
+        [FirestoreProperty] public string GroupId { get; set; } = "";
     }
 }

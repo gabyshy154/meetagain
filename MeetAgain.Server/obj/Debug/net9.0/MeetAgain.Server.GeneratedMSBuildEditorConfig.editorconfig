@@ -9,69 +9,93 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = MeetAgain.Server
 build_property.RootNamespace = MeetAgain.Server
-build_property.ProjectDir = C:\Users\Neil\Documents\project\MeetAgain.Server\
+build_property.ProjectDir = /Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\Neil\Documents\project\MeetAgain.Server
+build_property.MSBuildProjectDirectory = /Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/App.razor]
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/App.razor]
 build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Auth/Login.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXV0aFxMb2dpbi5yYXpvcg==
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Auth/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQXV0aC9Mb2dpbi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Auth/Register.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXV0aFxSZWdpc3Rlci5yYXpvcg==
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Auth/Register.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQXV0aC9SZWdpc3Rlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/CreateMeetup.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ3JlYXRlTWVldHVwLnJhem9y
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/AvailabilitySettings.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQXZhaWxhYmlsaXR5U2V0dGluZ3MucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Dashboard.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGFzaGJvYXJkLnJhem9y
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Calendar.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQ2FsZW5kYXIucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Index.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXgucmF6b3I=
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/CreateMeetup.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQ3JlYXRlTWVldHVwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/MeetupDetail.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWVldHVwRGV0YWlsLnJhem9y
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRGFzaGJvYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/MeetupEdit.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWVldHVwRWRpdC5yYXpvcg==
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Diagnostic.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRGlhZ25vc3RpYy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Meetups.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWVldHVwcy5yYXpvcg==
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Friends.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRnJpZW5kcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/_Imports.razor]
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Group.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvR3JvdXAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/MeetupDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvTWVldHVwRGV0YWlsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/MeetupEdit.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvTWVldHVwRWRpdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Meetups.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvTWVldHVwcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvTm90aWZpY2F0aW9ucy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Shared/MainLayout.razor]
-build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = b-vy48mqpgbp
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkL01haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-fn0qmd9g18
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Shared/NavMenu.razor]
-build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE5hdk1lbnUucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = b-f8ujzfwt7r
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Shared/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkL05hdk1lbnUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-f4daivkn0h
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/Error.cshtml]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXJyb3IuY3NodG1s
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRXJyb3IuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Neil/Documents/project/MeetAgain.Server/Pages/_Host.cshtml]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcX0hvc3QuY3NodG1s
+[/Users/gabrielsabang/RiderProjects/MeetAgain-Part3/MeetAgain.Server/Pages/_Host.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvX0hvc3QuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 

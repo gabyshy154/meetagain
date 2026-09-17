@@ -1,9 +1,16 @@
 @page "/dashboard"
+@using Google.Cloud.Firestore
+@using MeetAgain.Server.Models
+@using MeetAgain.Server.Services
 @inject MeetupService MeetupService
 @inject FriendService FriendService
 @inject GroupService GroupService
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@inject FirestoreDb FirestoreDb
+
+<PageTitle>Dashboard - MeetAgain</PageTitle>
 
 @if (loading)
 {
@@ -104,7 +111,7 @@ else
             <div class="space-y-3">
                 @foreach (var meetup in upcoming.Take(5))
                 {
-                    <a href="/meetups/@meetup.Id" class="meetup-card" style="text-decoration: none; color: inherit; display: block;">
+                    <a href="/meetups" class="meetup-card" style="text-decoration: none; color: inherit; display: block;">
                         <div class="meetup-title">@meetup.Title</div>
                         @if (!string.IsNullOrEmpty(meetup.Description))
                         {
@@ -116,6 +123,26 @@ else
                         }
                         <div class="meetup-date">
                             @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                        </div>
+                        <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                            @if (meetup.IsCreator)
+                            {
+                                <span class="badge" style="background: var(--success); color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                    Created by you
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge" style="background: var(--primary); color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                    Invited
+                                </span>
+                            }
+                            @if (!string.IsNullOrEmpty(meetup.MyRSVPStatus))
+                            {
+                                <span class="badge" style="background: var(--gray-600); color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                    @meetup.MyRSVPStatus
+                                </span>
+                            }
                         </div>
                     </a>
                 }
@@ -147,6 +174,11 @@ else
                         <div class="meetup-date" style="color: var(--gray-500);">
                             @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
                         </div>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="badge" style="background: var(--gray-400); color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                Completed
+                            </span>
+                        </div>
                     </div>
                 }
             </div>
@@ -177,28 +209,97 @@ else
     {
         try
         {
-            Console.WriteLine("Dashboard: Starting initialization");
+            Console.WriteLine("=== Dashboard Initialization Started ===");
+            
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
 
-            // Check authentication
-            var user = await Auth.GetCurrentUserAsync();
-            if (user == null)
+            if (principal?.Identity?.IsAuthenticated != true)
             {
-                Console.WriteLine("Dashboard: No user found, redirecting to login");
-                Nav.NavigateTo("/login", forceLoad: false);
+                Console.WriteLine("Dashboard: User not authenticated, redirecting to login");
+                Nav.NavigateTo("/login");
                 return;
             }
 
-            Console.WriteLine($"Dashboard: User loaded - {user.Email}");
-            displayName = !string.IsNullOrEmpty(user.DisplayName) ? user.DisplayName : user.Email;
+            // Try multiple methods to get user ID
+            var userId = principal.FindFirst(c => c.Type == "user_id")?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            }
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = principal.FindFirst(c => c.Type == "sub")?.Value;
+            }
 
-            // Load all data
+            Console.WriteLine($"Dashboard: Retrieved userId = {userId}");
+
+            // LOAD USERNAME FROM FIRESTORE
+            if (!string.IsNullOrEmpty(userId))
+            {
+                try
+                {
+                    Console.WriteLine($"Dashboard: Fetching user document from Firestore for userId: {userId}");
+                    
+                    var userDoc = await FirestoreDb.Collection("users").Document(userId).GetSnapshotAsync();
+                    
+                    if (userDoc.Exists)
+                    {
+                        var userData = userDoc.ToDictionary();
+                        
+                        // Try DisplayName first
+                        if (userData.ContainsKey("DisplayName") && !string.IsNullOrWhiteSpace(userData["DisplayName"]?.ToString()))
+                        {
+                            displayName = userData["DisplayName"]!.ToString()!;
+                            Console.WriteLine($"Dashboard: Loaded DisplayName from Firestore: {displayName}");
+                        }
+                        // Fallback to Email if DisplayName is empty
+                        else if (userData.ContainsKey("Email") && !string.IsNullOrWhiteSpace(userData["Email"]?.ToString()))
+                        {
+                            displayName = userData["Email"]!.ToString()!;
+                            Console.WriteLine($"Dashboard: DisplayName empty, using Email: {displayName}");
+                        }
+                        else
+                        {
+                            displayName = "User";
+                            Console.WriteLine("Dashboard: Both DisplayName and Email are empty, using 'User'");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Dashboard: User document does not exist in Firestore for userId: {userId}");
+                        // Fallback to email from claims
+                        var email = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
+                        displayName = !string.IsNullOrEmpty(email) ? email : "User";
+                        Console.WriteLine($"Dashboard: Using email from claims: {displayName}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Dashboard: ERROR loading user data from Firestore - {ex.Message}");
+                    Console.WriteLine($"Dashboard: Stack trace: {ex.StackTrace}");
+                    
+                    // Final fallback to claims
+                    var email = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
+                    displayName = !string.IsNullOrEmpty(email) ? email : "User";
+                    Console.WriteLine($"Dashboard: Using fallback from claims: {displayName}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Dashboard: No userId found in claims");
+                displayName = "User";
+            }
+
+            // LOAD MEETUPS
             Console.WriteLine("Dashboard: Loading meetups...");
             meetups = await MeetupService.GetMyMeetupsAsync() ?? new();
             Console.WriteLine($"Dashboard: Loaded {meetups.Count} meetups");
-            
-            // Get friend and group counts
+
+            // LOAD FRIENDS
             try
             {
+                Console.WriteLine("Dashboard: Loading friends...");
                 var friends = await FriendService.GetFriendsAsync();
                 friendCount = friends?.Count ?? 0;
                 Console.WriteLine($"Dashboard: Loaded {friendCount} friends");
@@ -209,8 +310,10 @@ else
                 friendCount = 0;
             }
 
+            // LOAD GROUPS
             try
             {
+                Console.WriteLine("Dashboard: Loading groups...");
                 var groups = await GroupService.GetMyGroupsAsync();
                 groupCount = groups?.Count ?? 0;
                 Console.WriteLine($"Dashboard: Loaded {groupCount} groups");
@@ -221,7 +324,7 @@ else
                 groupCount = 0;
             }
 
-            // Separate upcoming and past meetups
+            // CATEGORIZE MEETUPS
             var now = DateTime.Now;
             upcoming = meetups
                 .Where(m => m.EventDateTime.ToLocalTime() > now)
@@ -234,16 +337,18 @@ else
                 .ToList();
 
             Console.WriteLine($"Dashboard: {upcoming.Count} upcoming, {past.Count} past meetups");
+            Console.WriteLine($"=== Dashboard Initialization Complete ===");
+            Console.WriteLine($"Final displayName: {displayName}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Dashboard: Fatal error - {ex.Message}");
+            Console.WriteLine($"Dashboard: FATAL ERROR - {ex.Message}");
             Console.WriteLine($"Dashboard: Stack trace - {ex.StackTrace}");
+            displayName = "User";
         }
         finally
         {
             loading = false;
-            Console.WriteLine("Dashboard: Initialization complete");
         }
     }
 }

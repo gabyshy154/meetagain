@@ -2,6 +2,7 @@
 @inject MeetupService MeetupService
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="max-w-4xl mx-auto">
     <div class="page-header">
@@ -9,9 +10,9 @@
             <h2 class="page-title">My Meetups</h2>
             <p class="page-subtitle">View and manage all your scheduled meetups</p>
         </div>
-        <button type="button" class="btn btn-primary" @onclick="GoToCreateMeetup">
+        <a href="/create-meetup" class="btn btn-primary" style="text-decoration: none;">
             ➕ New Meetup
-        </button>
+        </a>
     </div>
 
     @if (loading)
@@ -30,29 +31,33 @@
                 <p class="empty-state-description">
                     Get started by creating your first meetup with friends!
                 </p>
-                <button type="button" class="btn btn-primary" @onclick="GoToCreateMeetup">
+                <a href="/create-meetup" class="btn btn-primary" style="text-decoration: none;">
                     Create Your First Meetup
-                </button>
+                </a>
             </div>
         </div>
     }
     else
     {
         <!-- Filter Tabs -->
-        <div class="filter-tabs">
-            <button type="button" class="filter-tab @(activeFilter == "all" ? "active" : "")" 
-                    @onclick="@(() => SetFilter("all"))">
-                All (@meetups.Count)
-            </button>
-            <button type="button" class="filter-tab @(activeFilter == "upcoming" ? "active" : "")" 
-                    @onclick="@(() => SetFilter("upcoming"))">
-                Upcoming (@upcomingMeetups.Count)
-            </button>
-            <button type="button" class="filter-tab @(activeFilter == "past" ? "active" : "")" 
-                    @onclick="@(() => SetFilter("past"))">
-                Past (@pastMeetups.Count)
-            </button>
-        </div>
+<div class="filter-tabs">
+    <a href="javascript:void(0)" 
+       onclick="window.location.href='/meetups?filter=all'"
+       class="filter-tab @(activeFilter == "all" ? "active" : "")">
+        All (@meetups.Count)
+    </a>
+    <a href="javascript:void(0)" 
+       onclick="window.location.href='/meetups?filter=upcoming'"
+       class="filter-tab @(activeFilter == "upcoming" ? "active" : "")">
+        Upcoming (@upcomingMeetups.Count)
+    </a>
+    <a href="javascript:void(0)" 
+       onclick="window.location.href='/meetups?filter=past'"
+       class="filter-tab @(activeFilter == "past" ? "active" : "")">
+        Past (@pastMeetups.Count)
+    </a>
+</div>
+
 
         <!-- Meetups List -->
         <div class="meetups-container">
@@ -292,17 +297,46 @@
         {
             Console.WriteLine("Meetups: Starting initialization");
 
-            var user = await Auth.GetCurrentUserAsync();
-            if (user == null)
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            if (principal?.Identity?.IsAuthenticated != true)
             {
-                Console.WriteLine("Meetups: No user found, redirecting to login");
                 Nav.NavigateTo("/login");
                 return;
             }
 
-            Console.WriteLine($"Meetups: User found - {user.Email}");
-            Console.WriteLine("Meetups: Loading meetups from service...");
+            var email = principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
+            Console.WriteLine($"Meetups: User from claims = {email}");
 
+            // Check if we need to delete a meetup
+            var uri = new Uri(Nav.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var action = query["action"];
+            var meetupId = query["id"];
+
+            if (action == "delete" && !string.IsNullOrEmpty(meetupId))
+            {
+                Console.WriteLine($"Meetups: Delete requested for meetup {meetupId}");
+                await DeleteMeetupAsync(meetupId);
+                // Force full reload to get fresh data
+                Nav.NavigateTo("/meetups", forceLoad: true);
+                return;
+            }
+
+            // Check for filter parameter
+            var filterParam = query["filter"];
+            if (!string.IsNullOrEmpty(filterParam))
+            {
+                activeFilter = filterParam;
+                Console.WriteLine($"Meetups: Filter set to '{activeFilter}' from URL");
+            }
+            else
+            {
+                Console.WriteLine($"Meetups: No filter param, using default '{activeFilter}'");
+            }
+
+            Console.WriteLine("Meetups: Loading meetups from service...");
             meetups = await MeetupService.GetMyMeetupsAsync();
             
             if (meetups == null)
@@ -335,26 +369,39 @@
         }
     }
 
-    private void GoToCreateMeetup()
+    private async Task DeleteMeetupAsync(string meetupId)
     {
-        Console.WriteLine("Meetups: Navigating to create meetup");
-        Nav.NavigateTo("/create-meetup");
-    }
-
-    private void SetFilter(string filter)
-    {
-        Console.WriteLine($"Meetups: Setting filter to {filter}");
-        activeFilter = filter;
+        try
+        {
+            Console.WriteLine($"Meetups: Deleting meetup {meetupId}");
+            var result = await MeetupService.DeleteMeetupAsync(meetupId);
+            
+            if (result)
+            {
+                Console.WriteLine("Meetups: Delete successful");
+            }
+            else
+            {
+                Console.WriteLine("Meetups: Delete failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Meetups: Error deleting meetup - {ex.Message}");
+        }
     }
 
     private List<MeetupDto> GetFilteredMeetups()
     {
-        return activeFilter switch
+        var result = activeFilter switch
         {
             "upcoming" => upcomingMeetups,
             "past" => pastMeetups,
             _ => meetups ?? new List<MeetupDto>()
         };
+        
+        Console.WriteLine($"GetFilteredMeetups: activeFilter='{activeFilter}', returning {result.Count} meetups");
+        return result;
     }
 
     private bool IsPast(MeetupDto meetup)
@@ -383,11 +430,5 @@
             return $"in {(int)timeUntil.TotalHours} hour{((int)timeUntil.TotalHours != 1 ? "s" : "")}";
         else
             return "starting soon";
-    }
-
-    private void ViewMeetupDetails(string meetupId)
-    {
-        Console.WriteLine($"Meetups: Navigating to meetup detail {meetupId}");
-        Nav.NavigateTo($"/meetups/{meetupId}");
     }
 }

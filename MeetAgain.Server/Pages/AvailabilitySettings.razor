@@ -1,0 +1,268 @@
+@page "/settings/availability"
+@using MeetAgain.Server.Services
+@inject AvailabilityService AvailabilityService
+@inject CurrentUserAccessor CurrentUserAccessor
+
+<PageTitle>Availability Settings - MeetAgain</PageTitle>
+
+<div class="container mt-4">
+    <h2><i class="bi bi-clock-history"></i> Availability Settings</h2>
+    <p class="text-muted">Set your availability preferences to help find the best meetup times.</p>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Preferred Days</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Select the days you're generally available for meetups.</p>
+                        <div class="row">
+                            @foreach (var day in allDays)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="day-@day" 
+                                               checked="@availability.PreferredDays.Contains(day)"
+                                               @onchange="@((e) => ToggleDay(day, (bool)e.Value!))">
+                                        <label class="form-check-label" for="day-@day">
+                                            @day
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-clock"></i> Available Time Slots</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Define your typical available hours.</p>
+                        
+                        @foreach (var (slot, index) in availability.AvailableTimeSlots.Select((s, i) => (s, i)))
+                        {
+                            <div class="row mb-3 align-items-center">
+                                <div class="col-5">
+                                    <label class="form-label">Start Time</label>
+                                    <input type="time" class="form-control" 
+                                           value="@slot.Start.ToString("HH:mm")"
+                                           @onchange="@((e) => UpdateSlotStart(index, e.Value?.ToString() ?? ""))">
+                                </div>
+                                <div class="col-5">
+                                    <label class="form-label">End Time</label>
+                                    <input type="time" class="form-control" 
+                                           value="@slot.End.ToString("HH:mm")"
+                                           @onchange="@((e) => UpdateSlotEnd(index, e.Value?.ToString() ?? ""))">
+                                </div>
+                                <div class="col-2 d-flex align-items-end">
+                                    @if (availability.AvailableTimeSlots.Count > 1)
+                                    {
+                                        <button class="btn btn-danger btn-sm" @onclick="() => RemoveTimeSlot(index)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <button class="btn btn-outline-success btn-sm" @onclick="AddTimeSlot">
+                            <i class="bi bi-plus-circle"></i> Add Time Slot
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-calendar-x"></i> Blocked Dates</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Mark dates when you're unavailable (vacations, appointments, etc.).</p>
+                        
+                        @if (availability.BlockedDates.Any())
+                        {
+                            <div class="mb-3">
+                                @foreach (var date in availability.BlockedDates.OrderBy(d => d))
+                                {
+                                    <span class="badge bg-warning text-dark me-2 mb-2">
+                                        @date.ToString("MMM dd, yyyy")
+                                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                                style="font-size: 0.7rem;"
+                                                @onclick="() => RemoveBlockedDate(date)"></button>
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="date" class="form-control" @bind="newBlockedDate">
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-warning" @onclick="AddBlockedDate">
+                                    <i class="bi bi-plus-circle"></i> Block Date
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-primary btn-lg" @onclick="SaveAvailability" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-save"></i> Save Availability
+                    </button>
+                    
+                    @if (!string.IsNullOrEmpty(saveMessage))
+                    {
+                        <div class="alert alert-success mb-0 py-2">
+                            <i class="bi bi-check-circle"></i> @saveMessage
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="bi bi-info-circle"></i> How It Works</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small">
+                            When creating a meetup, MeetAgain will analyze everyone's availability to suggest the best times:
+                        </p>
+                        <ul class="small">
+                            <li>✓ Matches your preferred days and time slots</li>
+                            <li>✓ Avoids blocked dates</li>
+                            <li>✓ Checks existing meetup conflicts</li>
+                            <li>✓ Maximizes participant availability</li>
+                        </ul>
+                        <hr>
+                        <p class="small text-muted mb-0">
+                            <strong>Tip:</strong> Keep your availability up to date for the most accurate suggestions!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UserAvailability availability = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string saveMessage = "";
+    private DateTime newBlockedDate = DateTime.Today.AddDays(1);
+
+    private readonly string[] allDays = new[] 
+    { 
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" 
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (userId, _) = await CurrentUserAccessor.GetUserAsync();
+        if (!string.IsNullOrEmpty(userId))
+        {
+            availability = await AvailabilityService.GetUserAvailabilityAsync(userId);
+            availability.UserId = userId;
+        }
+        isLoading = false;
+    }
+
+    private void ToggleDay(string day, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!availability.PreferredDays.Contains(day))
+                availability.PreferredDays.Add(day);
+        }
+        else
+        {
+            availability.PreferredDays.Remove(day);
+        }
+    }
+
+    private void UpdateSlotStart(int index, string time)
+    {
+        if (TimeOnly.TryParse(time, out TimeOnly startTime))
+        {
+            availability.AvailableTimeSlots[index].Start = startTime;
+        }
+    }
+
+    private void UpdateSlotEnd(int index, string time)
+    {
+        if (TimeOnly.TryParse(time, out TimeOnly endTime))
+        {
+            availability.AvailableTimeSlots[index].End = endTime;
+        }
+    }
+
+    private void AddTimeSlot()
+    {
+        availability.AvailableTimeSlots.Add(new TimeSlot 
+        { 
+            Start = new TimeOnly(9, 0), 
+            End = new TimeOnly(17, 0) 
+        });
+    }
+
+    private void RemoveTimeSlot(int index)
+    {
+        availability.AvailableTimeSlots.RemoveAt(index);
+    }
+
+    private void AddBlockedDate()
+    {
+        if (!availability.BlockedDates.Any(d => d.Date == newBlockedDate.Date))
+        {
+            availability.BlockedDates.Add(newBlockedDate.Date);
+            newBlockedDate = newBlockedDate.AddDays(1);
+        }
+    }
+
+    private void RemoveBlockedDate(DateTime date)
+    {
+        availability.BlockedDates.Remove(date);
+    }
+
+    private async Task SaveAvailability()
+    {
+        isSaving = true;
+        saveMessage = "";
+
+        try
+        {
+            await AvailabilityService.SaveUserAvailabilityAsync(availability);
+            saveMessage = "Settings saved successfully!";
+            
+            await Task.Delay(3000);
+            saveMessage = "";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}

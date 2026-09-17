@@ -1,5 +1,3 @@
-using MeetAgain.Server.Models;
-
 using Google.Cloud.Firestore;
 
 namespace MeetAgain.Server.Models
@@ -11,7 +9,11 @@ namespace MeetAgain.Server.Models
         [FirestoreProperty] public string Title { get; set; } = "";
         [FirestoreProperty] public string Description { get; set; } = "";
         [FirestoreProperty] public string CreatorUserId { get; set; } = "";
+        [FirestoreProperty] public string CreatorName { get; set; } = "";
+        [FirestoreProperty] public string Location { get; set; } = "";
         [FirestoreProperty] public DateTime EventDateTime { get; set; }
         [FirestoreProperty] public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [FirestoreProperty] public string Status { get; set; } = "confirmed"; // planning, confirmed, completed, cancelled
+        [FirestoreProperty] public int ParticipantCount { get; set; } = 0;
     }
 }
