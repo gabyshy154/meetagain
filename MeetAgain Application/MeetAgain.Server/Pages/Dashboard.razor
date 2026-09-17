@@ -1,0 +1,243 @@
+@page "/dashboard"
+@inject MeetupService MeetupService
+@inject FriendService FriendService
+@inject GroupService GroupService
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+@if (loading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 1rem; color: var(--gray-600);">Loading your dashboard...</p>
+    </div>
+}
+else
+{
+    <!-- Welcome Section -->
+    <div class="welcome-section fade-in">
+        <h1>Welcome back, @displayName! 👋</h1>
+        <p>Here's what's happening with your meetups and connections</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid fade-in">
+        <div class="stat-card upcoming">
+            <div class="stat-label">Upcoming Meetups</div>
+            <div class="stat-value">@upcoming.Count</div>
+            <div class="stat-description">
+                @if (upcoming.Any())
+                {
+                    <span>Next: @upcoming.First().EventDateTime.ToLocalTime().ToString("MMM dd")</span>
+                }
+                else
+                {
+                    <span>No meetups scheduled</span>
+                }
+            </div>
+        </div>
+
+        <div class="stat-card friends">
+            <div class="stat-label">Friends</div>
+            <div class="stat-value">@friendCount</div>
+            <div class="stat-description">Active connections</div>
+        </div>
+
+        <div class="stat-card groups">
+            <div class="stat-label">Groups</div>
+            <div class="stat-value">@groupCount</div>
+            <div class="stat-description">Communities you're part of</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Total Meetups</div>
+            <div class="stat-value">@meetups.Count</div>
+            <div class="stat-description">All time</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Quick Actions</h2>
+        </div>
+        <div class="flex space-x-4">
+            <a href="/create-meetup" class="btn btn-primary">
+                ➕ Create Meetup
+            </a>
+            <a href="/friends" class="btn btn-secondary">
+                👥 Manage Friends
+            </a>
+            <a href="/groups" class="btn btn-outline">
+                👨‍👩‍👧‍👦 View Groups
+            </a>
+        </div>
+    </div>
+
+    <!-- Upcoming Meetups Section -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Upcoming Meetups</h2>
+            @if (upcoming.Any())
+            {
+                <a href="/meetups" style="color: var(--primary); font-weight: 600; font-size: 0.875rem; text-decoration: none;">
+                    View All →
+                </a>
+            }
+        </div>
+
+        @if (!upcoming.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h3 class="empty-state-title">No Upcoming Meetups</h3>
+                <p class="empty-state-description">
+                    Create your first meetup and start connecting with friends!
+                </p>
+                <a href="/create-meetup" class="btn btn-primary">
+                    Create Your First Meetup
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var meetup in upcoming.Take(5))
+                {
+                    <a href="/meetups/@meetup.Id" class="meetup-card" style="text-decoration: none; color: inherit; display: block;">
+                        <div class="meetup-title">@meetup.Title</div>
+                        @if (!string.IsNullOrEmpty(meetup.Description))
+                        {
+                            <p style="color: var(--gray-600); font-size: 0.875rem; margin-top: 0.25rem;">
+                                @(meetup.Description.Length > 100 
+                                    ? meetup.Description.Substring(0, 100) + "..." 
+                                    : meetup.Description)
+                            </p>
+                        }
+                        <div class="meetup-date">
+                            @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                        </div>
+                    </a>
+                }
+            </div>
+
+            @if (upcoming.Count > 5)
+            {
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="/meetups" class="btn btn-outline btn-sm">
+                        View All @upcoming.Count Meetups
+                    </a>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Recent Activity / Past Meetups -->
+    @if (past.Any())
+    {
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title">Recent Past Meetups</h2>
+            </div>
+            <div class="space-y-3">
+                @foreach (var meetup in past.Take(3))
+                {
+                    <div class="meetup-card" style="opacity: 0.8;">
+                        <div class="meetup-title">@meetup.Title</div>
+                        <div class="meetup-date" style="color: var(--gray-500);">
+                            @meetup.EventDateTime.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+<style>
+    /* Make links look like buttons */
+    a.btn {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+@code {
+    private List<MeetupDto> meetups = new();
+    private List<MeetupDto> upcoming = new();
+    private List<MeetupDto> past = new();
+    private int friendCount = 0;
+    private int groupCount = 0;
+    private string displayName = "User";
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+{
+    try
+    {
+        Console.WriteLine("Dashboard: Starting initialization");
+
+        // Restore session from localStorage if new circuit (e.g. new tab)
+        await Auth.TryRestoreSessionAsync();
+
+        var user = await Auth.GetCurrentUserAsync();
+        if (user == null)
+        {
+            Console.WriteLine("Dashboard: No user found, redirecting to login");
+            Nav.NavigateTo("/login", forceLoad: false);
+            return;
+        }
+
+        Console.WriteLine($"Dashboard: User loaded - {user.Email}");
+        displayName = !string.IsNullOrEmpty(user.DisplayName) ? user.DisplayName : user.Email;
+
+        Console.WriteLine("Dashboard: Loading meetups...");
+        meetups = await MeetupService.GetMyMeetupsAsync() ?? new();
+        Console.WriteLine($"Dashboard: Loaded {meetups.Count} meetups");
+
+        try
+        {
+            var friends = await FriendService.GetFriendsAsync();
+            friendCount = friends?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard: Error loading friends - {ex.Message}");
+        }
+
+        try
+        {
+            var groups = await GroupService.GetMyGroupsAsync();
+            groupCount = groups?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard: Error loading groups - {ex.Message}");
+        }
+
+        var now = DateTime.Now;
+        upcoming = meetups
+            .Where(m => m.EventDateTime.ToLocalTime() > now)
+            .OrderBy(m => m.EventDateTime)
+            .ToList();
+
+        past = meetups
+            .Where(m => m.EventDateTime.ToLocalTime() <= now)
+            .OrderByDescending(m => m.EventDateTime)
+            .ToList();
+
+        Console.WriteLine($"Dashboard: {upcoming.Count} upcoming, {past.Count} past meetups");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Dashboard: Fatal error - {ex.Message}");
+    }
+    finally
+    {
+        loading = false;
+        Console.WriteLine("Dashboard: Initialization complete");
+    }
+    }
+}

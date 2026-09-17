@@ -1,0 +1,201 @@
+@page "/notifications"
+@using MeetAgain.Server.Services
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Notifications - MeetAgain</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-bell-fill"></i> Notifications
+            @if (unreadCount > 0)
+            {
+                <span class="badge bg-danger ms-2">@unreadCount</span>
+            }
+        </h2>
+        @if (notifications.Any())
+        {
+            <button class="btn btn-outline-primary btn-sm" @onclick="MarkAllAsRead">
+                <i class="bi bi-check-all"></i> Mark All as Read
+            </button>
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading notifications...</p>
+        </div>
+    }
+    else if (!notifications.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash" style="font-size: 4rem; color: #ddd;"></i>
+            <h4 class="mt-3 text-muted">No notifications yet</h4>
+            <p class="text-muted">You'll see updates about meetups, friend requests, and groups here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var notification in notifications)
+            {
+                <div class="list-group-item list-group-item-action @(!notification.IsRead ? "border-start border-primary border-4" : "")"
+                     style="cursor: pointer;"
+                     @onclick="() => HandleNotificationClick(notification)">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                @GetNotificationIcon(notification.Type)
+                                <h6 class="mb-0 ms-2 @(!notification.IsRead ? "fw-bold" : "")">
+                                    @notification.Message
+                                </h6>
+                            </div>
+                            <small class="text-muted">
+                                @FormatTimeAgo(notification.CreatedAt)
+                            </small>
+                        </div>
+                        <div class="d-flex align-items-center ms-3">
+                            @if (!notification.IsRead)
+                            {
+                                <span class="badge bg-primary rounded-pill me-2">New</span>
+                            }
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    @onclick="() => DeleteNotification(notification.Id)"
+                                    @onclick:stopPropagation="true">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<NotificationDto> notifications = new();
+    private int unreadCount = 0;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    private async Task LoadNotifications()
+    {
+        isLoading = true;
+        notifications = await NotificationService.GetMyNotificationsAsync();
+        unreadCount = await NotificationService.GetUnreadCountAsync();
+        isLoading = false;
+    }
+
+    private async Task HandleNotificationClick(NotificationDto notification)
+    {
+        // Mark as read (only if notification has a valid ID)
+        if (!notification.IsRead && !string.IsNullOrEmpty(notification.Id))
+        {
+            try
+            {
+                await NotificationService.MarkAsReadAsync(notification.Id);
+                notification.IsRead = true;
+                unreadCount = Math.Max(0, unreadCount - 1);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error marking notification as read: {ex.Message}");
+            }
+        }
+
+        // Navigate based on notification type
+        if (!string.IsNullOrEmpty(notification.MeetupId))
+        {
+            Console.WriteLine($"Navigating to meetup: {notification.MeetupId}");
+            // Try multiple possible routes
+            NavigationManager.NavigateTo($"/meetups", forceLoad: false);
+        }
+        else if (!string.IsNullOrEmpty(notification.GroupId))
+        {
+            Console.WriteLine($"Navigating to group: {notification.GroupId}");
+            NavigationManager.NavigateTo($"/groups");
+        }
+        else if (notification.Type == "friend_request")
+        {
+            Console.WriteLine("Navigating to friends page");
+            NavigationManager.NavigateTo("/friends");
+        }
+        else
+        {
+            Console.WriteLine($"No navigation target for notification type: {notification.Type}");
+        }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        await NotificationService.MarkAllAsReadAsync();
+        foreach (var notification in notifications)
+        {
+            notification.IsRead = true;
+        }
+        unreadCount = 0;
+        StateHasChanged();
+    }
+
+    private async Task DeleteNotification(string notificationId)
+    {
+        if (string.IsNullOrEmpty(notificationId))
+        {
+            Console.WriteLine("Cannot delete notification: ID is empty");
+            return;
+        }
+
+        try
+        {
+            await NotificationService.DeleteNotificationAsync(notificationId);
+            notifications.RemoveAll(n => n.Id == notificationId);
+            unreadCount = await NotificationService.GetUnreadCountAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting notification: {ex.Message}");
+        }
+    }
+
+    private MarkupString GetNotificationIcon(string type)
+    {
+        var icon = type switch
+        {
+            "meetup_invite" => "<i class='bi bi-calendar-plus text-primary'></i>",
+            "meetup_update" => "<i class='bi bi-calendar-event text-info'></i>",
+            "friend_request" => "<i class='bi bi-person-plus text-success'></i>",
+            "friend_request_accepted" => "<i class='bi bi-person-check text-success'></i>",
+            "group_invite" => "<i class='bi bi-people-fill text-warning'></i>",
+            "rsvp_change" => "<i class='bi bi-chat-square-dots text-secondary'></i>",
+            _ => "<i class='bi bi-bell text-muted'></i>"
+        };
+        return new MarkupString(icon);
+    }
+
+    private string FormatTimeAgo(string createdAt)
+    {
+        if (DateTime.TryParse(createdAt, out DateTime date))
+        {
+            var timeSpan = DateTime.UtcNow - date;
+            
+            if (timeSpan.TotalMinutes < 1) return "Just now";
+            if (timeSpan.TotalMinutes < 60) return $"{(int)timeSpan.TotalMinutes}m ago";
+            if (timeSpan.TotalHours < 24) return $"{(int)timeSpan.TotalHours}h ago";
+            if (timeSpan.TotalDays < 7) return $"{(int)timeSpan.TotalDays}d ago";
+            if (timeSpan.TotalDays < 30) return $"{(int)(timeSpan.TotalDays / 7)}w ago";
+            
+            return date.ToString("MMM dd, yyyy");
+        }
+        return "";
+    }
+}

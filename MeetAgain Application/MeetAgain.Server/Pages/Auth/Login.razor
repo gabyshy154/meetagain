@@ -1,0 +1,326 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<div class="auth-container">
+    <div class="auth-card fade-in">
+        <!-- Logo/Header -->
+        <div class="auth-header">
+            <h1 class="auth-logo">🤝 MeetAgain</h1>
+            <h2 class="auth-title">Welcome Back</h2>
+            <p class="auth-subtitle">Sign in to continue organizing your meetups</p>
+        </div>
+
+        <!-- Error Message -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error">
+                <span class="alert-icon">⚠️</span>
+                <span>@errorMessage</span>
+            </div>
+        }
+
+        <!-- Login Form -->
+        <EditForm Model="@model" OnValidSubmit="HandleLogin" class="auth-form">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">📧</span>
+                    <InputText id="email" 
+                               @bind-Value="model.Email" 
+                               class="form-control"
+                               placeholder="you@example.com"
+                               type="email" />
+                </div>
+                <ValidationMessage For="@(() => model.Email)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">🔒</span>
+                    <InputText id="password" 
+                               @bind-Value="model.Password" 
+                               class="form-control"
+                               placeholder="Enter your password"
+                               type="password" />
+                </div>
+                <ValidationMessage For="@(() => model.Password)" class="validation-message" />
+            </div>
+
+            <!-- Remember Me & Forgot Password -->
+            <div class="form-extras">
+                <label class="checkbox-label">
+                    <input type="checkbox" />
+                    <span>Remember me</span>
+                </label>
+                <a href="#" class="link-text">Forgot password?</a>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary btn-lg btn-block" disabled="@isLoggingIn">
+                @if (isLoggingIn)
+                {
+                    <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </EditForm>
+
+        <!-- Sign Up Link -->
+        <div class="auth-footer">
+            <p>Don't have an account? 
+                <a href="/register" class="link-primary">Sign up</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        min-height: calc(100vh - 200px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: 3rem;
+        width: 100%;
+        max-width: 450px;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .auth-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.5rem;
+    }
+
+    .auth-subtitle {
+        color: var(--gray-600);
+        font-size: 0.95rem;
+    }
+
+    .auth-form {
+        margin-bottom: 1.5rem;
+    }
+
+    .input-with-icon {
+        position: relative;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.125rem;
+        pointer-events: none;
+    }
+
+    .input-with-icon .form-control {
+        padding-left: 3rem;
+    }
+
+    .form-extras {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.875rem;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        color: var(--gray-700);
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: auto;
+        cursor: pointer;
+    }
+
+    .link-text {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .link-text:hover {
+        text-decoration: underline;
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .auth-divider {
+        position: relative;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+
+    .auth-divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--gray-200);
+    }
+
+    .auth-divider span {
+        position: relative;
+        background: white;
+        padding: 0 1rem;
+        color: var(--gray-500);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .social-login {
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-social {
+        width: 100%;
+        background: white;
+        border: 2px solid var(--gray-200);
+        color: var(--gray-700);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    .btn-social:hover:not(:disabled) {
+        background: var(--gray-50);
+        border-color: var(--gray-300);
+    }
+
+    .btn-social:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .auth-footer {
+        text-align: center;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .link-primary {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .link-primary:hover {
+        text-decoration: underline;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: var(--radius);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .alert-error {
+        background: #FEE2E2;
+        color: #991B1B;
+        border-left: 4px solid var(--danger);
+    }
+
+    .alert-icon {
+        font-size: 1.25rem;
+    }
+
+    @@media (max-width: 640px) {
+        .auth-card {
+            padding: 2rem 1.5rem;
+        }
+
+        .auth-title {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+@code {
+    private LoginModel model = new();
+    private string errorMessage = "";
+    private bool isLoggingIn = false;
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            isLoggingIn = true;
+            errorMessage = "";
+
+            var success = await Auth.LoginAsync(model.Email, model.Password);
+            
+            if (success)
+            {
+                Nav.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorMessage = Auth.LastFirebaseError ?? "Invalid email or password. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during login. Please try again.";
+            Console.WriteLine($"Login error: {ex.Message}");
+        }
+        finally
+        {
+            isLoggingIn = false;
+        }
+    }
+
+    // Model class
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Password is required")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+        public string Password { get; set; } = "";
+    }
+}

@@ -1,0 +1,421 @@
+@page "/calendar"
+@using MeetAgain.Server.Models
+@using MeetAgain.Server.Services
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<PageTitle>Calendar - MeetAgain</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 1rem; color: var(--gray-600);">Loading calendar...</p>
+    </div>
+}
+else
+{
+    <div class="welcome-section fade-in">
+        <h1>📅 Calendar</h1>
+        <p>View all your meetups in a calendar format</p>
+    </div>
+
+    <!-- Calendar Controls -->
+    <div class="card fade-in" style="margin-bottom: 1.5rem;">
+        <div class="card-body" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <!-- Month Navigation -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="btn btn-outline btn-sm" @onclick="PreviousMonth">
+                        ← Previous
+                    </button>
+                    <h2 style="margin: 0; font-size: 1.25rem; min-width: 200px; text-align: center;">
+                        @currentMonth.ToString("MMMM yyyy")
+                    </h2>
+                    <button class="btn btn-outline btn-sm" @onclick="NextMonth">
+                        Next →
+                    </button>
+                </div>
+
+                <!-- Filter & Actions -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-outline btn-sm" @onclick="GoToToday">
+                        📍 Today
+                    </button>
+                    <a href="/create-meetup" class="btn btn-primary btn-sm">
+                        ➕ Create Meetup
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="card fade-in">
+        <div class="card-body" style="padding: 1rem;">
+            <!-- Day Headers -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+                @foreach (var day in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+                {
+                    <div style="text-align: center; font-weight: 600; color: var(--gray-700); padding: 0.5rem; font-size: 0.875rem;">
+                        @day
+                    </div>
+                }
+            </div>
+
+            <!-- Calendar Days -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
+                @foreach (var day in calendarDays)
+                {
+                    <div class="calendar-day @(day.IsToday ? "today" : "") @(day.IsCurrentMonth ? "" : "other-month")"
+                         @onclick="() => SelectDay(day)"
+                         style="cursor: pointer;">
+                        <div class="day-number">@day.Date.Day</div>
+                        
+                        @if (day.Meetups.Count > 0)
+                        {
+                            <div class="meetup-indicators">
+                                @foreach (var meetup in day.Meetups.Take(3))
+                                {
+                                    <div class="meetup-indicator @(meetup.IsCreator ? "created" : "invited")" 
+                                         title="@meetup.Title">
+                                        <span class="meetup-time">@meetup.EventDateTime.ToLocalTime().ToString("h:mm tt")</span>
+                                        <span class="meetup-title-short">@(meetup.Title.Length > 15 ? meetup.Title.Substring(0, 15) + "..." : meetup.Title)</span>
+                                    </div>
+                                }
+                                @if (day.Meetups.Count > 3)
+                                {
+                                    <div class="meetup-more">+@(day.Meetups.Count - 3) more</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Selected Day Details -->
+    @if (selectedDay != null && selectedDay.Meetups.Count > 0)
+    {
+        <div class="card fade-in" style="margin-top: 1.5rem;">
+            <div class="card-header" style="background: var(--primary); color: white;">
+                <h3 style="margin: 0; color: white;">
+                    📅 @selectedDay.Date.ToString("dddd, MMMM d, yyyy")
+                </h3>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; gap: 1rem;">
+                    @foreach (var meetup in selectedDay.Meetups.OrderBy(m => m.EventDateTime))
+                    {
+                        <div class="meetup-card @(meetup.IsCreator ? "created-meetup" : "invited-meetup")"
+                             @onclick="() => NavigateToMeetup(meetup.Id)"
+                             style="cursor: pointer;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span class="badge" style="background: @(meetup.IsCreator ? "var(--success)" : "var(--primary)");">
+                                            @(meetup.IsCreator ? "Created by you" : "Invited")
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(meetup.MyRSVPStatus))
+                                        {
+                                            <span class="badge" style="background: var(--gray-600);">
+                                                @meetup.MyRSVPStatus
+                                            </span>
+                                        }
+                                    </div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1.125rem;">@meetup.Title</h4>
+                                    <p style="color: var(--gray-600); margin: 0 0 0.5rem 0; font-size: 0.875rem;">
+                                        @meetup.Description
+                                    </p>
+                                    <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                                        <span>🕐 @meetup.EventDateTime.ToLocalTime().ToString("h:mm tt")</span>
+                                        <span>👥 @meetup.ParticipantCount participant@(meetup.ParticipantCount != 1 ? "s" : "")</span>
+                                        @if (!string.IsNullOrEmpty(meetup.CreatorName) && !meetup.IsCreator)
+                                        {
+                                            <span>👤 @meetup.CreatorName</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="view-details-badge">
+                                        View Details →
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Legend -->
+    <div class="card fade-in" style="margin-top: 1.5rem;">
+        <div class="card-body" style="padding: 1rem;">
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;">
+                <div style="font-weight: 600; color: var(--gray-700);">Legend:</div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="legend-indicator created"></div>
+                    <span style="font-size: 0.875rem;">Created by you</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="legend-indicator invited"></div>
+                    <span style="font-size: 0.875rem;">Invited to</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid white;"></div>
+                    <span style="font-size: 0.875rem;">Today</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .calendar-day {
+        min-height: 100px;
+        padding: 0.5rem;
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .calendar-day:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+
+    .calendar-day.today {
+        border: 2px solid var(--primary);
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    }
+
+    .calendar-day.other-month {
+        background: var(--gray-50);
+        opacity: 0.5;
+    }
+
+    .day-number {
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .meetup-indicators {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .meetup-indicator {
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .meetup-indicator.created {
+        background: #D1FAE5;
+        border-left: 3px solid var(--success);
+    }
+
+    .meetup-indicator.invited {
+        background: #DBEAFE;
+        border-left: 3px solid var(--primary);
+    }
+
+    .meetup-time {
+        font-weight: 600;
+        display: block;
+        color: var(--gray-700);
+    }
+
+    .meetup-title-short {
+        color: var(--gray-600);
+        display: block;
+    }
+
+    .meetup-more {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        font-weight: 600;
+        padding: 0.25rem;
+    }
+
+    .meetup-card {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--gray-200);
+        transition: all 0.2s ease;
+    }
+
+    .meetup-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .meetup-card.created-meetup {
+        background: linear-gradient(135deg, #D1FAE515 0%, #A7F3D015 100%);
+        border-left: 4px solid var(--success);
+    }
+
+    .meetup-card.invited-meetup {
+        background: linear-gradient(135deg, #DBEAFE15 0%, #93C5FD15 100%);
+        border-left: 4px solid var(--primary);
+    }
+
+    .view-details-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--primary);
+        color: white;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+
+    .meetup-card:hover .view-details-badge {
+        background: var(--primary-dark);
+        transform: translateX(4px);
+    }
+
+    .legend-indicator {
+        width: 40px;
+        height: 20px;
+        border-radius: 0.25rem;
+    }
+
+    .legend-indicator.created {
+        background: #D1FAE5;
+        border-left: 3px solid var(--success);
+    }
+
+    .legend-indicator.invited {
+        background: #DBEAFE;
+        border-left: 3px solid var(--primary);
+    }
+
+    @@media (max-width: 768px) {
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.25rem;
+        }
+
+        .day-number {
+            font-size: 0.75rem;
+        }
+
+        .meetup-indicator {
+            font-size: 0.65rem;
+            padding: 0.125rem;
+        }
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private DateTime currentMonth = DateTime.Today;
+    private DateTime today = DateTime.Today;
+    private List<CalendarDay> calendarDays = new();
+    private CalendarDay? selectedDay = null;
+    private List<MeetupDto> allMeetups = new();
+
+    public class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public bool IsToday { get; set; }
+        public bool IsCurrentMonth { get; set; }
+        public List<MeetupDto> Meetups { get; set; } = new();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMeetups();
+        BuildCalendar();
+        isLoading = false;
+    }
+
+    private async Task LoadMeetups()
+    {
+        try
+        {
+            allMeetups = await MeetupService.GetMyMeetupsAsync();
+            Console.WriteLine($"Loaded {allMeetups.Count} meetups for calendar");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading meetups: {ex.Message}");
+        }
+    }
+
+    private void BuildCalendar()
+    {
+        calendarDays.Clear();
+
+        var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+
+        var startDate = firstDayOfMonth.AddDays(-(int)firstDayOfMonth.DayOfWeek);
+        var endDate = lastDayOfMonth.AddDays(6 - (int)lastDayOfMonth.DayOfWeek);
+
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            var day = new CalendarDay
+            {
+                Date = date,
+                IsToday = date.Date == today.Date,
+                IsCurrentMonth = date.Month == currentMonth.Month,
+                Meetups = allMeetups
+                    .Where(m => m.EventDateTime.ToLocalTime().Date == date.Date)
+                    .OrderBy(m => m.EventDateTime)
+                    .ToList()
+            };
+
+            calendarDays.Add(day);
+        }
+
+        Console.WriteLine($"Built calendar with {calendarDays.Count} days");
+    }
+
+    private void PreviousMonth()
+    {
+        currentMonth = currentMonth.AddMonths(-1);
+        BuildCalendar();
+    }
+
+    private void NextMonth()
+    {
+        currentMonth = currentMonth.AddMonths(1);
+        BuildCalendar();
+    }
+
+    private void GoToToday()
+    {
+        currentMonth = today;
+        BuildCalendar();
+        var todayDay = calendarDays.FirstOrDefault(d => d.IsToday);
+        if (todayDay != null && todayDay.Meetups.Count > 0)
+        {
+            selectedDay = todayDay;
+        }
+    }
+
+    private void SelectDay(CalendarDay day)
+    {
+        selectedDay = day;
+        Console.WriteLine($"Selected {day.Date.ToShortDateString()} with {day.Meetups.Count} meetups");
+    }
+
+    // FIXED: Navigate to meetups page - this matches your existing route
+    private void NavigateToMeetup(string meetupId)
+    {
+        Console.WriteLine($"Navigating to meetup: {meetupId}");
+        // Navigate to the meetups page - the detail will show there
+        Navigation.NavigateTo($"/meetups");
+    }
+}

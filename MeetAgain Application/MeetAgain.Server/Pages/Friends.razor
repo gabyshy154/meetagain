@@ -1,0 +1,412 @@
+@page "/friends"
+@using MeetAgain.Server.Models
+@using MeetAgain.Server.Services
+@inject FriendService FriendService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Friends - MeetAgain</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 1rem; color: var(--gray-600);">Loading friends...</p>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="alert alert-warning" style="margin: 2rem; padding: 2rem; text-align: center;">
+        <p>Please log in to view friends.</p>
+        <a href="/login" class="btn btn-primary">Go to Login</a>
+    </div>
+}
+else
+{
+    <!-- Header -->
+    <div class="welcome-section fade-in">
+        <h1>👥 Friends</h1>
+        <p>Manage your friend connections and requests</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        
+        <!-- Add Friend Card -->
+        <div class="card fade-in">
+            <div class="card-header" style="background: var(--primary); color: white;">
+                <h2 class="card-title" style="color: white; margin: 0;">➕ Add Friend</h2>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@searchEmail" OnValidSubmit="SearchAndSendRequest">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--gray-700);">
+                            Friend's Email
+                        </label>
+                        <InputText @bind-Value="searchEmail" 
+                                   class="form-control" 
+                                   placeholder="friend@example.com"
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem;" />
+                    </div>
+                    
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="alert alert-error" style="margin-bottom: 1rem;">
+                            @errorMessage
+                            <button type="button" style="float: right; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: inherit;" @onclick="() => errorMessage = string.Empty">×</button>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(successMessage))
+                    {
+                        <div class="alert alert-success" style="margin-bottom: 1rem;">
+                            @successMessage
+                            <button type="button" style="float: right; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: inherit;" @onclick="() => successMessage = string.Empty">×</button>
+                        </div>
+                    }
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;" disabled="@isSending">
+                        @if (isSending)
+                        {
+                            <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                        }
+                        else
+                        {
+                            <span>📤 </span>
+                        }
+                        Send Request
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Friend Requests Card -->
+        <div class="card fade-in">
+            <div class="card-header" style="background: var(--warning); color: var(--gray-900);">
+                <h2 class="card-title" style="color: var(--gray-900); margin: 0; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📬 Friend Requests</span>
+                    @if (friendRequests.Count > 0)
+                    {
+                        <span class="badge" style="background: var(--danger); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem;">
+                            @friendRequests.Count
+                        </span>
+                    }
+                </h2>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                @if (friendRequests.Count == 0)
+                {
+                    <div style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📭</div>
+                        <p>No pending friend requests</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var request in friendRequests)
+                        {
+                            <div style="padding: 1rem; border: 1px solid var(--gray-200); border-radius: 0.5rem; background: var(--gray-50);">
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-weight: 600; color: var(--gray-900);">@request.FromUserName</div>
+                                    <div style="font-size: 0.875rem; color: var(--gray-600);">@request.FromUserEmail</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-success btn-sm" 
+                                            style="flex: 1;"
+                                            @onclick="() => AcceptRequest(request.FromUserId)"
+                                            disabled="@processingRequests.Contains(request.FromUserId)">
+                                        ✓ Accept
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" 
+                                            style="flex: 1;"
+                                            @onclick="() => RejectRequest(request.FromUserId)"
+                                            disabled="@processingRequests.Contains(request.FromUserId)">
+                                        ✗ Reject
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Friends List -->
+    <div class="card fade-in">
+        <div class="card-header" style="background: var(--success); color: white;">
+            <h2 class="card-title" style="color: white; margin: 0;">
+                👥 My Friends (@friends.Count)
+            </h2>
+        </div>
+        <div class="card-body">
+            @if (friends.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-state-icon">👤</div>
+                    <h3 class="empty-state-title">No Friends Yet</h3>
+                    <p class="empty-state-description">
+                        Start by adding friends using their email address above
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                    @foreach (var friend in friends)
+                    {
+                        <div style="border: 1px solid var(--gray-200); border-radius: 0.5rem; padding: 1.25rem; background: white; transition: all 0.2s;">
+                            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 600; margin-right: 1rem;">
+                                    @GetInitials(friend.Name)
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @friend.Name
+                                    </div>
+                                    <div style="font-size: 0.875rem; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @friend.Email
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" 
+                                    style="width: 100%;"
+                                    @onclick="() => ShowUnfriendConfirmation(friend)"
+                                    disabled="@removingFriends.Contains(friend.Id)">
+                                @if (removingFriends.Contains(friend.Id))
+                                {
+                                    <span class="loading-spinner" style="width: 0.875rem; height: 0.875rem; margin-right: 0.25rem;"></span>
+                                }
+                                else
+                                {
+                                    <span>👋 </span>
+                                }
+                                Unfriend
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Unfriend Confirmation Modal -->
+@if (showUnfriendModal && friendToRemove != null)
+{
+    <div class="modal-overlay" style="display: flex;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; color: var(--gray-900);">Confirm Unfriend</h3>
+                <button type="button" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-500);" @onclick="CancelUnfriend">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 0.75rem;">
+                    Are you sure you want to unfriend <strong>@friendToRemove.Name</strong>?
+                </p>
+                <p style="color: var(--gray-600); font-size: 0.875rem; margin: 0;">
+                    This action cannot be undone. You will need to send a new friend request to reconnect.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" @onclick="CancelUnfriend">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmUnfriend">
+                    👋 Unfriend
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private bool isSending = false;
+    private string searchEmail = string.Empty;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private List<Friend> friends = new();
+    private List<FriendRequest> friendRequests = new();
+    private HashSet<string> processingRequests = new();
+    private HashSet<string> removingFriends = new();
+
+    private bool showUnfriendModal = false;
+    private Friend? friendToRemove = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check authentication FIRST
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+            Console.WriteLine($"Friends Page: Authenticated = {isAuthenticated}");
+
+            if (!isAuthenticated)
+            {
+                Console.WriteLine("User not authenticated, showing login prompt");
+                isLoading = false;
+                return;
+            }
+
+            // NOW load friends
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+            errorMessage = "Failed to load page. Please refresh.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            Console.WriteLine("🔄 Loading friends data...");
+            friends = await FriendService.GetFriendsAsync();
+            friendRequests = await FriendService.GetFriendRequestsAsync();
+            Console.WriteLine($"✅ Loaded {friends.Count} friends and {friendRequests.Count} requests");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading friends data: {ex.Message}");
+            errorMessage = "Failed to load friends data. Please refresh the page.";
+        }
+    }
+
+    private async Task SearchAndSendRequest()
+    {
+        if (string.IsNullOrWhiteSpace(searchEmail))
+        {
+            errorMessage = "Please enter an email address";
+            return;
+        }
+
+        isSending = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            var success = await FriendService.SendFriendRequestAsync(searchEmail.Trim());
+            
+            if (success)
+            {
+                successMessage = $"Friend request sent to {searchEmail}!";
+                searchEmail = string.Empty;
+            }
+            else
+            {
+                errorMessage = "Could not send friend request. User may not exist, request already sent, or you're already friends.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending friend request: {ex.Message}");
+            errorMessage = "An error occurred while sending the friend request.";
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private async Task AcceptRequest(string fromUserId)
+    {
+        processingRequests.Add(fromUserId);
+        try
+        {
+            var success = await FriendService.AcceptFriendRequestAsync(fromUserId);
+            if (success)
+            {
+                await LoadDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error accepting request: {ex.Message}");
+        }
+        finally
+        {
+            processingRequests.Remove(fromUserId);
+        }
+    }
+
+    private async Task RejectRequest(string fromUserId)
+    {
+        processingRequests.Add(fromUserId);
+        try
+        {
+            var success = await FriendService.RejectFriendRequestAsync(fromUserId);
+            if (success)
+            {
+                friendRequests.RemoveAll(r => r.FromUserId == fromUserId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rejecting request: {ex.Message}");
+        }
+        finally
+        {
+            processingRequests.Remove(fromUserId);
+        }
+    }
+
+    private void ShowUnfriendConfirmation(Friend friend)
+    {
+        friendToRemove = friend;
+        showUnfriendModal = true;
+    }
+
+    private void CancelUnfriend()
+    {
+        showUnfriendModal = false;
+        friendToRemove = null;
+    }
+
+    private async Task ConfirmUnfriend()
+    {
+        if (friendToRemove == null) return;
+
+        var friendId = friendToRemove.Id;
+        removingFriends.Add(friendId);
+        showUnfriendModal = false;
+
+        try
+        {
+            var success = await FriendService.RemoveFriendAsync(friendId);
+            if (success)
+            {
+                friends.RemoveAll(f => f.Id == friendId);
+                friendToRemove = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing friend: {ex.Message}");
+        }
+        finally
+        {
+            removingFriends.Remove(friendId);
+        }
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+}

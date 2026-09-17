@@ -1,0 +1,264 @@
+@page "/create-meetup"
+@inject MeetupService MeetupService
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<div class="max-w-4xl mx-auto">
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="card-title">Create New Meetup</h2>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error">
+                ⚠️ @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@model" OnValidSubmit="HandleCreate">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-summary" />
+
+            <div class="form-group">
+                <label>Title *</label>
+                <InputText @bind-Value="model.Title" 
+                           class="form-control" 
+                           placeholder="e.g., Coffee Meetup, Game Night, Study Session" />
+                <ValidationMessage For="@(() => model.Title)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label>Description *</label>
+                <InputTextArea @bind-Value="model.Description" 
+                               class="form-control" 
+                               placeholder="What's this meetup about? Add any details participants should know..."
+                               rows="4" />
+                <ValidationMessage For="@(() => model.Description)" class="validation-message" />
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date *</label>
+                    <InputDate @bind-Value="model.Date" class="form-control" />
+                    <ValidationMessage For="@(() => model.Date)" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label>Time *</label>
+                    <input type="time" 
+                           class="form-control" 
+                           @bind="timeString" 
+                           @bind:event="oninput" />
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <h3 class="preview-title">Preview</h3>
+                <div class="meetup-preview">
+                    <div class="preview-header">
+                        <strong>@(string.IsNullOrWhiteSpace(model.Title) ? "Meetup Title" : model.Title)</strong>
+                    </div>
+                    <p class="preview-description">
+                        @(string.IsNullOrWhiteSpace(model.Description) ? "Meetup description will appear here..." : model.Description)
+                    </p>
+                    <div class="preview-datetime">
+                        📅 @model.Date.ToString("MMMM dd, yyyy") at @timeString
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="loading-spinner" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></span>
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span>Create Meetup</span>
+                    }
+                </button>
+                <a href="/dashboard" class="btn btn-outline">
+                    Cancel
+                </a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .alert {
+        padding: 1rem;
+        border-radius: var(--radius);
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-error {
+        background: #FEE2E2;
+        color: #991B1B;
+        border-left: 4px solid var(--danger);
+    }
+
+    .validation-summary {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: var(--danger);
+    }
+
+    .validation-message {
+        color: var(--danger);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius);
+        font-size: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .preview-section {
+        background: var(--gray-50);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        margin-bottom: 1.5rem;
+    }
+
+    .preview-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 1rem;
+    }
+
+    .meetup-preview {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        border: 2px solid var(--gray-200);
+    }
+
+    .preview-header {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.75rem;
+    }
+
+    .preview-description {
+        color: var(--gray-600);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .preview-datetime {
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-start;
+    }
+
+    @@media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private CreateMeetupModel model = new();
+    private string timeString = "12:00";
+    private string errorMessage = "";
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.TryRestoreSessionAsync();
+
+        var user = await Auth.GetCurrentUserAsync();
+        if (user == null)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        model.Date = DateTime.Today.AddDays(1);
+        timeString = "12:00";
+        UpdateModelTime();
+    }
+
+    private void UpdateModelTime()
+    {
+        if (TimeOnly.TryParse(timeString, out var t))
+            model.Time = t;
+    }
+
+    private async Task HandleCreate()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = "";
+            
+            // Make sure time is updated
+            UpdateModelTime();
+
+            Console.WriteLine($"Creating meetup: {model.Title} on {model.Date:yyyy-MM-dd} at {timeString}");
+
+            var success = await MeetupService.CreateMeetupAsync(model);
+            
+            if (success)
+            {
+                Console.WriteLine("Meetup created successfully!");
+                // Use forceLoad: false to maintain the auth state
+                Nav.NavigateTo("/dashboard", forceLoad: false);
+            }
+            else
+            {
+                errorMessage = "Failed to create meetup. Please try again.";
+                Console.WriteLine("Failed to create meetup");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            Console.WriteLine($"Error creating meetup: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo("/dashboard", forceLoad: false);
+    }
+}

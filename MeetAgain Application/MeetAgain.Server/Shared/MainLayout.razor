@@ -1,0 +1,72 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject AuthService Auth
+
+<div class="min-h-screen flex flex-col">
+    <header>
+        <div class="flex justify-between items-center">
+            <div class="cursor-pointer" @onclick="GoHome">
+                <strong>🤝 MeetAgain</strong>
+            </div>
+
+            <nav class="flex items-center space-x-4">
+                @if (string.IsNullOrEmpty(Auth.UserId))
+                {
+                    <a class="nav-link" href="/login">Login</a>
+                    <a class="nav-link btn-secondary btn-sm" href="/register">Get Started</a>
+                }
+                else
+                {
+                    <a class="nav-link" href="/dashboard">
+                        <span class="nav-icon">🏠</span> Dashboard
+                    </a>
+                    <a class="nav-link" href="/meetups">
+                        <span class="nav-icon">📅</span> Meetups
+                    </a>
+                    <a class="nav-link" href="/friends">
+                        <span class="nav-icon">👥</span> Friends
+                    </a>
+                    <a class="nav-link" href="/groups">
+                        <span class="nav-icon">👨‍👩‍👧‍👦</span> Groups
+                    </a>
+                    <a class="nav-link" href="/calendar">
+                        <span class="nav-icon">📆</span> Calendar
+                    </a>
+                    <button type="button" class="btn-outline btn-sm" @onclick="HandleLogout">
+                        Logout
+                    </button>
+                }
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1">
+        @Body
+    </main>
+
+    <footer style="background: var(--gray-100); padding: 1.5rem; text-align: center; color: var(--gray-600); font-size: 0.875rem;">
+        <p>&copy; @DateTime.Now.Year MeetAgain. Built with ❤️ for bringing people together.</p>
+    </footer>
+</div>
+
+<style>
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .nav-icon {
+        font-size: 1.125rem;
+    }
+</style>
+
+@code {
+    private void GoHome() => Nav.NavigateTo("/");
+
+    private async Task HandleLogout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+}
