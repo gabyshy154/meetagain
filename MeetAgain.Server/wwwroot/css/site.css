@@ -4,24 +4,55 @@
    ROOT VARIABLES & RESET
    ============================================ */
 :root {
-    --primary: #4F46E5;
-    --primary-dark: #4338CA;
-    --primary-light: #6366F1;
-    --secondary: #7C3AED;
-    --success: #10B981;
-    --danger: #EF4444;
-    --warning: #F59E0B;
-    --gray-50: #F9FAFB;
-    --gray-100: #F3F4F6;
-    --gray-200: #E5E7EB;
-    --gray-300: #D1D5DB;
-    --gray-600: #4B5563;
-    --gray-700: #374151;
-    --gray-900: #111827;
+    color-scheme: light;
+    --primary: #5B3FD9;
+    --primary-rgb: 91, 63, 217;
+    --primary-dark: #4930B8;
+    --primary-light: #7C66ED;
+    --secondary: #FF6B57;
+    --accent: #FF6B57;
+    --accent-text: #1C1A2E;
+    --primary-text: #FFFFFF;
+    --ink: #1C1A2E;
+    --background: #F8F7FC;
+    --surface: #FFFFFF;
+    --border: #E4E1F0;
+    --slate: #605C78;
+    --success: #1E9E6A;
+    --danger: #D33A3A;
+    --warning: #E8A317;
+    --availability-low: #EDE9FE;
+    --availability-mid: #A996F3;
+    --availability-mid-text: #1C1A2E;
+    --availability-high: #5B3FD9;
+    --availability-high-text: #FFFFFF;
+    --availability-low-text: #433783;
+    --gray-50: #F8F7FC;
+    --gray-100: #F1EFF8;
+    --gray-200: #E4E1F0;
+    --gray-300: #CBC7DC;
+    --gray-400: #A5A0B8;
+    --gray-500: #817C97;
+    --gray-600: #605C78;
+    --gray-700: #39364E;
+    --gray-900: #1C1A2E;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-heading: 'Outfit', 'Inter', sans-serif;
+    --bs-primary: #5B3FD9;
+    --bs-primary-rgb: 91, 63, 217;
+    --bs-success-rgb: 30, 158, 106;
+    --bs-danger-rgb: 211, 58, 58;
+    --bs-warning-rgb: 232, 163, 23;
+    --bs-info-rgb: 96, 92, 120;
+    --bs-body-bg: #F8F7FC;
+    --bs-body-color: #1C1A2E;
+    --bs-border-color: #E4E1F0;
+    --bs-link-color: #5B3FD9;
+    --bs-link-hover-color: #4930B8;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 8px 24px rgba(28, 26, 46, 0.06);
+    --shadow-md: 0 12px 30px rgba(28, 26, 46, 0.09);
+    --shadow-lg: 0 24px 60px rgba(28, 26, 46, 0.12);
     --radius: 8px;
     --radius-lg: 12px;
 }
@@ -33,12 +64,25 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--gray-50);
+    background: var(--background);
     color: var(--gray-900);
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6,
+.card-title, .section-title, .page-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--ink);
+}
+
+time, .meetup-date, .meetup-item-date, .meetup-item-time, .countdown-time {
+    font-variant-numeric: tabular-nums;
 }
 
 /* ============================================
@@ -130,7 +174,7 @@ header nav a:hover {
    MAIN CONTENT AREA
    ============================================ */
 main {
-    padding: 2rem;
+    padding: clamp(1.2rem, 2.5vw, 2.5rem);
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
@@ -145,12 +189,18 @@ main {
 }
 
 .welcome-section {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: white;
+    background: var(--primary);
+    color: var(--primary-text);
     padding: 2rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     margin-bottom: 2rem;
+}
+
+.welcome-section h1,
+.welcome-section h2,
+.welcome-section h3 {
+    color: var(--primary-text);
 }
 
 .welcome-section h1 {
@@ -172,7 +222,7 @@ main {
 }
 
 .stat-card {
-    background: white;
+    background: var(--surface);
     padding: 1.5rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
@@ -223,11 +273,13 @@ main {
    CARDS & SECTIONS
    ============================================ */
 .card {
-    background: white;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     box-shadow: var(--shadow);
     margin-bottom: 1.5rem;
+    backdrop-filter: blur(8px);
 }
 
 .card-header {
@@ -256,12 +308,13 @@ main {
    MEETUP CARDS
    ============================================ */
 .meetup-card {
-    background: white;
-    border: 1px solid var(--gray-200);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 1.25rem;
     transition: all 0.2s ease;
     cursor: pointer;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
 }
 
 .meetup-card:hover {
@@ -297,6 +350,7 @@ button, .btn {
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius);
     font-weight: 600;
+    font-family: var(--font-body);
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -309,7 +363,20 @@ button, .btn {
 
 .btn-primary {
     background: var(--primary);
-    color: white;
+    color: var(--primary-text);
+}
+
+.btn-find-times {
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 700;
+}
+
+.btn-find-times:hover:not(:disabled) {
+    background: #F45D49;
+    color: var(--accent-text);
+    box-shadow: 0 8px 20px rgba(255, 107, 87, 0.24);
+    transform: translateY(-1px);
 }
 
 .btn-primary:hover {
@@ -334,7 +401,7 @@ button, .btn {
 }
 
 .btn-success:hover {
-    background: #059669;
+    background: #14784F;
 }
 
 .btn-outline {
@@ -382,11 +449,13 @@ textarea,
 select {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid var(--gray-200);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 1rem;
     transition: all 0.2s ease;
-    background: white;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
 }
 
 input:focus,
@@ -394,7 +463,7 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 3px rgba(91, 63, 217, 0.14);
 }
 
 textarea {
@@ -429,6 +498,36 @@ textarea {
 .empty-state-description {
     color: var(--gray-600);
     margin-bottom: 1.5rem;
+}
+
+.rsvp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.rsvp-accepted {
+    background: rgba(30, 158, 106, 0.12);
+    color: #14784F;
+}
+
+.rsvp-maybe {
+    background: rgba(232, 163, 23, 0.16);
+    color: #805900;
+}
+
+.rsvp-declined {
+    background: rgba(211, 58, 58, 0.12);
+    color: #A62929;
+}
+
+.rsvp-other {
+    background: var(--gray-100);
+    color: var(--slate);
 }
 
 /* ============================================
@@ -480,6 +579,11 @@ textarea {
     color: var(--primary);
 }
 
+.text-muted,
+.text-gray-600 {
+    color: var(--slate) !important;
+}
+
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-4 { margin-bottom: 1rem; }
 .mb-6 { margin-bottom: 1.5rem; }
@@ -505,6 +609,97 @@ textarea {
 
 .rounded-lg {
     border-radius: var(--radius-lg);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --primary: #9B86FF;
+        --primary-rgb: 155, 134, 255;
+        --primary-dark: #8068F0;
+        --primary-light: #B5A6FF;
+        --primary-text: #1C1A2E;
+        --bs-primary: #9B86FF;
+        --bs-primary-rgb: 155, 134, 255;
+        --bs-body-bg: #121022;
+        --bs-body-color: #F4F1FF;
+        --bs-border-color: #38334F;
+        --bs-link-color: #B5A6FF;
+        --bs-link-hover-color: #D0C5FF;
+        --ink: #F4F1FF;
+        --background: #121022;
+        --surface: #1C1933;
+        --border: #38334F;
+        --slate: #B7B1CB;
+        --gray-50: #1C1933;
+        --gray-100: #26223D;
+        --gray-200: #38334F;
+        --gray-300: #514B6A;
+        --gray-400: #77718F;
+        --gray-500: #9993AD;
+        --gray-600: #B7B1CB;
+        --gray-700: #D5D0E4;
+        --gray-900: #F4F1FF;
+        --availability-low: #2B2547;
+        --availability-mid: #6555A8;
+        --availability-mid-text: #FFFFFF;
+        --availability-high: #9B86FF;
+        --availability-high-text: #1C1A2E;
+        --availability-low-text: #EDE9FE;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.28);
+        --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.34);
+    }
+
+    .card, .stat-card, .meetup-card, .feature-card, .hero-section, .auth-card,
+    .modal-content, .calendar-day, .meetup-item {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--gray-900);
+    }
+
+    input, textarea, select, .form-control {
+        background-color: var(--surface) !important;
+        border-color: var(--border) !important;
+        color: var(--gray-900) !important;
+    }
+
+    input::placeholder, textarea::placeholder {
+        color: var(--gray-500);
+    }
+
+    .empty-state, .btn-outline, .btn-secondary, .suggestion-item {
+        background-color: var(--gray-100);
+        border-color: var(--border);
+        color: var(--gray-900);
+    }
+
+    .app-footer {
+        background: var(--surface);
+        color: var(--slate);
+        border-color: var(--border);
+    }
+
+    .bg-primary,
+    .btn-primary,
+    .badge-primary {
+        color: var(--primary-text) !important;
+    }
+
+    .rsvp-accepted {
+        background: rgba(30, 158, 106, 0.2);
+        color: #72D6A8;
+    }
+
+    .rsvp-maybe {
+        background: rgba(232, 163, 23, 0.2);
+        color: #FFD36A;
+    }
+
+    .rsvp-declined {
+        background: rgba(211, 58, 58, 0.2);
+        color: #FF9999;
+    }
 }
 
 /* ============================================
