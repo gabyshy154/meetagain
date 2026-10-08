@@ -5,7 +5,12 @@ phases:
     runtime-versions:
       dotnet: 9
     commands:
-      - if [ -f /root/.dotnet/dotnet ]; then echo "dotnet already installed"; else echo "Installing dotnet..."; fi
+      - |
+        if [ -x "$(command -v dotnet)" ]; then
+          echo "dotnet is available"
+        else
+          echo "dotnet will be installed by runtime-versions"
+        fi
   build:
     commands:
       - dotnet restore MeetAgain.Server/MeetAgain.Server.csproj
