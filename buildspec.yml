@@ -1,0 +1,18 @@
+version: 0.1
+
+phases:
+  install:
+    runtime-versions:
+      dotnet: 9
+  build:
+    commands:
+      - dotnet restore MeetAgain.Server/MeetAgain.Server.csproj
+      - dotnet publish MeetAgain.Server/MeetAgain.Server.csproj -c Release -o dist --self-contained false
+  post_build:
+    commands:
+      - echo "Build completed successfully"
+
+artifacts:
+  files:
+    - "**/*"
+  discard-paths: yes
