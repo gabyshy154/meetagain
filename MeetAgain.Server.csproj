@@ -11,9 +11,4 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
     <PackageReference Include="Google.Cloud.Firestore" Version="3.13.0" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="firebase-adminsdk.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

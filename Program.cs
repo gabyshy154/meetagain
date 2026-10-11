@@ -9,13 +9,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------
 // Load Firebase settings
+// Server (AWS): full service-account JSON in FIREBASE_CREDENTIALS
+// Laptop:       falls back to the file named in appsettings.json
 // ------------------------------------------------------
+var credentialsJson = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS");
 var credentialsPath = builder.Configuration["Firebase:CredentialsFile"];
 var projectId       = builder.Configuration["Firebase:ProjectId"];
 var apiKey          = builder.Configuration["Firebase:ApiKey"];
 
-if (string.IsNullOrWhiteSpace(credentialsPath))
-    throw new Exception("Missing Firebase:CredentialsFile");
+if (string.IsNullOrWhiteSpace(credentialsJson) && string.IsNullOrWhiteSpace(credentialsPath))
+    throw new Exception("Set FIREBASE_CREDENTIALS or Firebase:CredentialsFile");
 if (string.IsNullOrWhiteSpace(projectId))
     throw new Exception("Missing Firebase:ProjectId");
 if (string.IsNullOrWhiteSpace(apiKey))
@@ -25,11 +28,16 @@ if (string.IsNullOrWhiteSpace(apiKey))
 // Initialize Firebase Admin SDK
 // ------------------------------------------------------
 GoogleCredential googleCred;
-using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
+if (!string.IsNullOrWhiteSpace(credentialsJson))
 {
-    googleCred = GoogleCredential.FromStream(stream)
-        .CreateScoped("https://www.googleapis.com/auth/cloud-platform");
+    googleCred = GoogleCredential.FromJson(credentialsJson);
 }
+else
+{
+    using var stream = new FileStream(credentialsPath!, FileMode.Open, FileAccess.Read);
+    googleCred = GoogleCredential.FromStream(stream);
+}
+googleCred = googleCred.CreateScoped("https://www.googleapis.com/auth/cloud-platform");
 
 if (FirebaseApp.DefaultInstance == null)
 {
