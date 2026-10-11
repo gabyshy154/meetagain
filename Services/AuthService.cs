@@ -100,7 +100,7 @@ namespace MeetAgain.Server.Services
                 var response    = await _http.PostAsJsonAsync(url, payload);
                 var rawResponse = await response.Content.ReadAsStringAsync();
 
-                Console.WriteLine("Firebase Login Response: " + rawResponse);
+                // Console.WriteLine("Firebase Login Response: " + rawResponse);
 
                 if (!response.IsSuccessStatusCode)
                 {
