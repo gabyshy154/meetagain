@@ -11,4 +11,9 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
     <PackageReference Include="Google.Cloud.Firestore" Version="3.13.0" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Keep the private key out of publish output (and out of the AWS zip) -->
+    <Content Remove="firebase-adminsdk.json" />
+    <None Remove="firebase-adminsdk.json" />
+  </ItemGroup>
 </Project>

@@ -6,3 +6,4 @@ publish/
 firebase-adminsdk.json
 appsettings.Development.json
 .env
+app.zip
