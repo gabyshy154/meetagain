@@ -9,16 +9,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------
 // Load Firebase settings
-// Server (AWS): full service-account JSON in FIREBASE_CREDENTIALS
+// Server (AWS): base64 of the service-account JSON in FIREBASE_CREDENTIALS_B64
+//               (base64 survives Elastic Beanstalk's env-var packing; raw JSON does not)
 // Laptop:       falls back to the file named in appsettings.json
 // ------------------------------------------------------
-var credentialsJson = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS");
+var credentialsB64  = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_B64");
+var credentialsJson = !string.IsNullOrWhiteSpace(credentialsB64)
+    ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(credentialsB64.Trim()))
+    : Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS");
 var credentialsPath = builder.Configuration["Firebase:CredentialsFile"];
 var projectId       = builder.Configuration["Firebase:ProjectId"];
 var apiKey          = builder.Configuration["Firebase:ApiKey"];
 
 if (string.IsNullOrWhiteSpace(credentialsJson) && string.IsNullOrWhiteSpace(credentialsPath))
-    throw new Exception("Set FIREBASE_CREDENTIALS or Firebase:CredentialsFile");
+    throw new Exception("Set FIREBASE_CREDENTIALS_B64 or Firebase:CredentialsFile");
 if (string.IsNullOrWhiteSpace(projectId))
     throw new Exception("Missing Firebase:ProjectId");
 if (string.IsNullOrWhiteSpace(apiKey))
