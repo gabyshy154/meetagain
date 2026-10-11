@@ -6,7 +6,10 @@
 <div class="auth-container">
     <div class="auth-card fade-in">
         <div class="auth-header">
-            <h1 class="auth-logo">🤝 MeetAgain</h1>
+            <!-- CHANGED: custom logo image instead of 🤝 emoji -->
+            <div class="auth-logo">
+                <img src="/assets/meetAgain.png" alt="MeetAgain" class="logo-img" />
+            </div>
             <h2 class="auth-title">Welcome Back</h2>
             <p class="auth-subtitle">Sign in to continue organizing your meetups</p>
         </div>
@@ -166,7 +169,18 @@
         margin-bottom: 2rem;
     }
 
-    .auth-logo { font-size: 2.5rem; margin-bottom: 1rem; }
+    /* CHANGED: image logo container */
+    .auth-logo {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .logo-img {
+        height: 72px;
+        width: auto;
+        object-fit: contain;
+    }
 
     .auth-title {
         font-size: 1.75rem;
@@ -176,9 +190,7 @@
     }
 
     .auth-subtitle { color: var(--gray-600); font-size: 0.95rem; }
-
     .auth-form { margin-bottom: 1.5rem; }
-
     .input-with-icon { position: relative; }
 
     .input-icon {
@@ -218,14 +230,8 @@
         font-size: inherit;
     }
 
-    .link-text {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 500;
-    }
-
+    .link-text { color: var(--primary); text-decoration: none; font-weight: 500; }
     .link-text:hover { text-decoration: underline; }
-
     .btn-block { width: 100%; }
 
     .auth-footer {
@@ -235,12 +241,7 @@
         color: var(--gray-600);
     }
 
-    .link-primary {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-    }
-
+    .link-primary { color: var(--primary); text-decoration: none; font-weight: 600; }
     .link-primary:hover { text-decoration: underline; }
 
     .alert {
@@ -252,18 +253,8 @@
         gap: 0.75rem;
     }
 
-    .alert-error {
-        background: #FEE2E2;
-        color: #991B1B;
-        border-left: 4px solid var(--danger);
-    }
-
-    .alert-success {
-        background: #D1FAE5;
-        color: #065F46;
-        border-left: 4px solid var(--success);
-    }
-
+    .alert-error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--danger); }
+    .alert-success { background: #D1FAE5; color: #065F46; border-left: 4px solid var(--success); }
     .alert-icon { font-size: 1.25rem; }
 
     .modal-backdrop {
@@ -315,31 +306,30 @@
     @@media (max-width: 640px) {
         .auth-card { padding: 2rem 1.5rem; }
         .auth-title { font-size: 1.5rem; }
+        .logo-img { height: 56px; }
     }
 </style>
 
 @code {
     private LoginModel model = new();
-    private string errorMessage  = "";
+    private string errorMessage = "";
     private string successMessage = "";
-    private bool   isLoggingIn   = false;
-    private bool   rememberMe    = false;   // bound to the checkbox
+    private bool isLoggingIn = false;
+    private bool rememberMe = false;
 
-    // Forgot password state
-    private bool   showForgotPassword = false;
-    private string resetEmail         = "";
-    private string resetMessage       = "";
-    private bool   resetSuccess       = false;
-    private bool   isSendingReset     = false;
+    private bool showForgotPassword = false;
+    private string resetEmail = "";
+    private string resetMessage = "";
+    private bool resetSuccess = false;
+    private bool isSendingReset = false;
 
     private async Task HandleLogin()
     {
-        isLoggingIn  = true;
+        isLoggingIn = true;
         errorMessage = "";
 
         try
         {
-            // ✅ THE FIX: pass rememberMe so the token goes to the right store
             var success = await Auth.LoginAsync(model.Email, model.Password, rememberMe);
 
             if (success)
@@ -364,7 +354,7 @@
 
     private void ShowForgotPassword()
     {
-        resetEmail   = model.Email; // pre-fill with whatever they typed
+        resetEmail = model.Email;
         resetMessage = "";
         resetSuccess = false;
         showForgotPassword = true;
@@ -374,7 +364,7 @@
     {
         showForgotPassword = false;
         resetMessage = "";
-        resetEmail   = "";
+        resetEmail = "";
     }
 
     private async Task HandleForgotPassword()
@@ -387,7 +377,7 @@
         }
 
         isSendingReset = true;
-        resetMessage   = "";
+        resetMessage = "";
 
         try
         {

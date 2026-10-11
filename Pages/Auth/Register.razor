@@ -6,7 +6,10 @@
 <div class="auth-container">
     <div class="auth-card fade-in">
         <div class="auth-header">
-            <h1 class="auth-logo">🤝 MeetAgain</h1>
+            <!-- CHANGED: custom logo image instead of 🤝 emoji -->
+            <div class="auth-logo">
+                <img src="/assets/meetAgain.png" alt="MeetAgain" class="logo-img" />
+            </div>
             <h2 class="auth-title">Create Your Account</h2>
             <p class="auth-subtitle">Join us and start organizing amazing meetups</p>
         </div>
@@ -82,7 +85,6 @@
                 <ValidationMessage For="@(() => model.ConfirmPassword)" class="validation-message" />
             </div>
 
-            <!-- FIX: Terms/Privacy use @onclick modals, not href="#" -->
             <div class="form-group">
                 <label class="checkbox-label">
                     <InputCheckbox @bind-Value="model.AcceptTerms" />
@@ -137,9 +139,7 @@
                         <li>We reserve the right to terminate accounts that violate these terms.</li>
                         <li>The service is provided "as is" without warranties of any kind.</li>
                     </ul>
-                    <p style="margin-top: 1rem; color: var(--gray-600); font-size: 0.875rem;">
-                        Last updated: January 2025
-                    </p>
+                    <p style="margin-top: 1rem; color: var(--gray-600); font-size: 0.875rem;">Last updated: January 2025</p>
                 }
                 else
                 {
@@ -151,9 +151,7 @@
                         <li>We do not sell your data to third parties.</li>
                         <li>You can request deletion of your account at any time.</li>
                     </ul>
-                    <p style="margin-top: 1rem; color: var(--gray-600); font-size: 0.875rem;">
-                        Last updated: January 2025
-                    </p>
+                    <p style="margin-top: 1rem; color: var(--gray-600); font-size: 0.875rem;">Last updated: January 2025</p>
                 }
             </div>
             <div style="display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
@@ -183,7 +181,19 @@
     }
 
     .auth-header { text-align: center; margin-bottom: 2rem; }
-    .auth-logo { font-size: 2.5rem; margin-bottom: 1rem; }
+
+    /* CHANGED: image logo container */
+    .auth-logo {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .logo-img {
+        height: 72px;
+        width: auto;
+        object-fit: contain;
+    }
 
     .auth-title {
         font-size: 1.75rem;
@@ -194,7 +204,6 @@
 
     .auth-subtitle { color: var(--gray-600); font-size: 0.95rem; }
     .auth-form { margin-bottom: 1.5rem; }
-
     .input-with-icon { position: relative; }
 
     .input-icon {
@@ -208,11 +217,7 @@
 
     .input-with-icon .form-control { padding-left: 3rem; }
 
-    .input-hint {
-        margin-top: 0.25rem;
-        font-size: 0.813rem;
-        color: var(--gray-600);
-    }
+    .input-hint { margin-top: 0.25rem; font-size: 0.813rem; color: var(--gray-600); }
 
     .checkbox-label {
         display: flex;
@@ -224,30 +229,11 @@
         line-height: 1.5;
     }
 
-    .checkbox-label input[type="checkbox"] {
-        width: auto;
-        cursor: pointer;
-        margin-top: 0.25rem;
-    }
+    .checkbox-label input[type="checkbox"] { width: auto; cursor: pointer; margin-top: 0.25rem; }
 
-    /* FIX: Inline link-buttons that look like anchor tags */
-    .btn-link {
-        background: none;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        font-size: inherit;
-        display: inline;
-    }
-
-    .link-text {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 500;
-    }
-
+    .btn-link { background: none; border: none; padding: 0; cursor: pointer; font-size: inherit; display: inline; }
+    .link-text { color: var(--primary); text-decoration: none; font-weight: 500; }
     .link-text:hover { text-decoration: underline; }
-
     .btn-block { width: 100%; }
 
     .auth-footer {
@@ -257,12 +243,7 @@
         color: var(--gray-600);
     }
 
-    .link-primary {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-    }
-
+    .link-primary { color: var(--primary); text-decoration: none; font-weight: 600; }
     .link-primary:hover { text-decoration: underline; }
 
     .alert {
@@ -274,21 +255,10 @@
         gap: 0.75rem;
     }
 
-    .alert-success {
-        background: #D1FAE5;
-        color: #065F46;
-        border-left: 4px solid var(--success);
-    }
-
-    .alert-error {
-        background: #FEE2E2;
-        color: #991B1B;
-        border-left: 4px solid var(--danger);
-    }
-
+    .alert-success { background: #D1FAE5; color: #065F46; border-left: 4px solid var(--success); }
+    .alert-error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--danger); }
     .alert-icon { font-size: 1.25rem; }
 
-    /* Modal */
     .modal-backdrop {
         position: fixed;
         inset: 0;
@@ -320,20 +290,9 @@
         flex-shrink: 0;
     }
 
-    .modal-header h3 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--gray-900);
-        margin: 0;
-    }
+    .modal-header h3 { font-size: 1.25rem; font-weight: 700; color: var(--gray-900); margin: 0; }
 
-    .modal-body {
-        overflow-y: auto;
-        flex: 1;
-        line-height: 1.7;
-        color: var(--gray-700);
-        padding-right: 0.25rem;
-    }
+    .modal-body { overflow-y: auto; flex: 1; line-height: 1.7; color: var(--gray-700); }
 
     .btn-close {
         background: none;
@@ -350,6 +309,7 @@
     @@media (max-width: 640px) {
         .auth-card { padding: 2rem 1.5rem; }
         .auth-title { font-size: 1.5rem; }
+        .logo-img { height: 56px; }
     }
 </style>
 
@@ -359,7 +319,6 @@
     private string successMessage = "";
     private bool isRegistering = false;
 
-    // Legal modal state
     private bool showLegalModal = false;
     private string legalPage = "terms";
 
@@ -369,10 +328,7 @@
         showLegalModal = true;
     }
 
-    private void HideLegal()
-    {
-        showLegalModal = false;
-    }
+    private void HideLegal() => showLegalModal = false;
 
     private async Task HandleRegister()
     {
