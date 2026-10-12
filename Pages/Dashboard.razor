@@ -135,7 +135,10 @@ else
                             }
                             @if (!string.IsNullOrEmpty(meetup.MyRSVPStatus))
                             {
-                                <span class="badge badge-gray">@meetup.MyRSVPStatus</span>
+                                <span class="rsvp-badge @GetRsvpBadgeClass(meetup.MyRSVPStatus)">
+                                    <span aria-hidden="true">@GetRsvpIcon(meetup.MyRSVPStatus)</span>
+                                    @GetRsvpLabel(meetup.MyRSVPStatus)
+                                </span>
                             }
                         </div>
                     </a>
@@ -420,6 +423,30 @@ else
     }
 
     // ── Initialization ────────────────────────────────────────────────────────
+    private static string GetRsvpBadgeClass(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "accepted" => "rsvp-accepted",
+        "maybe" => "rsvp-maybe",
+        "declined" => "rsvp-declined",
+        _ => "rsvp-other"
+    };
+
+    private static string GetRsvpIcon(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "accepted" => "✓",
+        "maybe" => "?",
+        "declined" => "✕",
+        _ => "•"
+    };
+
+    private static string GetRsvpLabel(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "accepted" => "Accepted",
+        "maybe" => "Maybe",
+        "declined" => "Declined",
+        _ => string.IsNullOrWhiteSpace(status) ? "Unknown" : status.Trim()
+    };
+
     protected override async Task OnInitializedAsync()
     {
         try

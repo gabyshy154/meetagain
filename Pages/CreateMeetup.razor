@@ -162,7 +162,7 @@
                         💡 Smart Time Suggestions
                     </h3>
                     <button type="button"
-                            class="btn btn-primary btn-sm"
+                            class="btn btn-find-times btn-sm"
                             @onclick="FindBestTimes"
                             disabled="@isFindingTimes">
                         @if (isFindingTimes)
@@ -392,7 +392,7 @@
     .form-actions { display: flex; gap: 1rem; justify-content: flex-start; }
 
     .smart-suggestions-card {
-        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+        background: var(--surface);
         border: 2px solid var(--primary-light);
         border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem;
     }
@@ -403,13 +403,13 @@
     .suggestions-list { display: flex; flex-direction: column; gap: 0.75rem; }
 
     .suggestion-item {
-        background: white; border: 2px solid var(--gray-200);
+        background: var(--surface); border: 2px solid var(--gray-200);
         border-radius: var(--radius); padding: 1rem;
         cursor: pointer; transition: all 0.2s ease;
     }
     .suggestion-item:hover { border-color: var(--primary); transform: translateX(4px); }
-    .suggestion-item.selected { background: var(--primary); border-color: var(--primary); color: white; }
-    .suggestion-item.selected * { color: white !important; }
+    .suggestion-item.selected { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+    .suggestion-item.selected * { color: var(--primary-text) !important; }
 
     .suggestion-content { display: flex; justify-content: space-between; align-items: center; }
     .suggestion-badge { text-align: right; }
@@ -418,9 +418,9 @@
         display: inline-block; padding: 0.25rem 0.75rem;
         border-radius: 1rem; font-weight: 600; font-size: 0.875rem;
     }
-    .availability-badge.high { background: var(--success); color: white; }
-    .availability-badge.medium { background: var(--warning); color: var(--gray-900); }
-    .availability-badge.low { background: var(--danger); color: white; }
+    .availability-badge.high { background: var(--availability-high); color: var(--availability-high-text); }
+    .availability-badge.medium { background: var(--availability-mid); color: var(--availability-mid-text); }
+    .availability-badge.low { background: var(--availability-low); color: var(--availability-low-text); }
 
     @@media (max-width: 768px) {
         .form-row { grid-template-columns: 1fr; }
