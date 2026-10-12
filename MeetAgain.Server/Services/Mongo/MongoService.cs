@@ -10,7 +10,6 @@ namespace MeetAgain.Server.Services.Mongo
     public class MongoService
     {
         private readonly MongoDbContext _ctx;
-        public CustomAuthStateProvider? AuthStateProvider { get; set; }
 
         public MongoService(MongoDbContext ctx) => _ctx = ctx ?? throw new ArgumentNullException(nameof(ctx));
 

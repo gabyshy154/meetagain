@@ -227,11 +227,11 @@
                     }
                     else
                     {
-                        <div style="margin-top: 1rem; padding: 1rem; background: var(--warning); background: #FEF3C7; border-radius: var(--radius);">
-                            <p style="color: #92400E; margin: 0; font-weight: 600;">
+                        <div style="margin-top: 1rem; padding: 1rem; background: var(--warning-surface); border-radius: var(--radius);">
+                            <p style="color: var(--warning-text); margin: 0; font-weight: 600;">
                                 ⚠️ No optimal times found
                             </p>
-                            <p style="color: #92400E; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
+                            <p style="color: var(--warning-text); margin: 0.5rem 0 0 0; font-size: 0.875rem;">
                                 Try adjusting your date range or manually set a time below. You can also ask participants to update their availability settings.
                             </p>
                         </div>
@@ -258,14 +258,16 @@
             <div class="preview-section">
                 <h3 class="preview-title">📋 Preview</h3>
                 <div class="meetup-preview">
-                    <div class="preview-header">
+                    <div class="preview-header @(string.IsNullOrWhiteSpace(model.Title) ? "is-placeholder" : "")">
                         <strong>@(string.IsNullOrWhiteSpace(model.Title) ? "Meetup Title" : model.Title)</strong>
                     </div>
-                    <p class="preview-description">
+                    <p class="preview-description @(string.IsNullOrWhiteSpace(model.Description) ? "is-placeholder" : "")">
                         @(string.IsNullOrWhiteSpace(model.Description) ? "Meetup description will appear here..." : model.Description)
                     </p>
                     <div class="preview-datetime">
-                        📅 @model.Date.ToString("MMMM dd, yyyy") at @timeString
+                        <span>📅</span>
+                        <span class="preview-datetime-label">When</span>
+                        <span class="preview-datetime-value">@PreviewDateTime</span>
                     </div>
                     @if (selectedGroupIds.Count > 0 || selectedFriendIds.Count > 0)
                     {
@@ -341,15 +343,9 @@
         margin-bottom: 1.5rem;
     }
 
-    .alert-error {
-        background: #FEE2E2;
-        color: #991B1B;
-        border-left: 4px solid var(--danger);
-    }
-
     .validation-summary {
-        background: #FEF2F2;
-        border: 1px solid #FECACA;
+        background: var(--danger-surface);
+        border: 1px solid var(--danger);
         border-radius: var(--radius);
         padding: 1rem;
         margin-bottom: 1.5rem;
@@ -390,7 +386,7 @@
         border: 2px solid var(--gray-200);
         border-radius: var(--radius);
         padding: 0.5rem;
-        background: white;
+        background: var(--surface);
     }
 
     .friend-checkbox-item {
@@ -441,29 +437,56 @@
     }
 
     .meetup-preview {
-        background: white;
+        background: var(--surface);
         padding: 1.5rem;
         border-radius: var(--radius);
         border: 2px solid var(--gray-200);
     }
 
     .preview-header {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         font-weight: 700;
         color: var(--gray-900);
+        line-height: 1.3;
         margin-bottom: 0.75rem;
     }
 
     .preview-description {
         color: var(--gray-600);
         line-height: 1.6;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    /* Placeholder copy is styled distinctly so it's obvious the card is
+       waiting on input rather than showing real content. */
+    .is-placeholder {
+        font-style: italic;
+        font-weight: 400;
+        opacity: 0.6;
     }
 
     .preview-datetime {
-        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-200);
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: 0.9375rem;
+        color: var(--gray-900);
+    }
+
+    .preview-datetime-label {
+        font-weight: 500;
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-secondary);
+    }
+
+    .preview-datetime-value {
+        font-weight: 700;
+        color: var(--primary);
     }
 
     .form-actions {
@@ -584,6 +607,26 @@
     private List<GroupDto> groups = new();
     private HashSet<string> selectedFriendIds = new();
     private HashSet<string> selectedGroupIds = new();
+
+    /// <summary>
+    /// Preview timestamp. timeString is assigned raw from the time input
+    /// (which can include seconds, e.g. "03:02:00") while the reset path uses
+    /// "12:00" — normalise to HH:mm so the preview never shows stray seconds.
+    /// </summary>
+    private string PreviewDateTime
+    {
+        get
+        {
+            var date = model.Date == default ? DateTime.Today : model.Date;
+            var time = timeString;
+            if (TimeOnly.TryParse(timeString, out var parsed))
+                time = parsed.ToString("HH\\:mm");
+            else if (!string.IsNullOrWhiteSpace(time))
+                time = time.Length > 5 ? time[..5] : time;
+
+            return $"{date:MMMM dd, yyyy} at {time}";
+        }
+    }
     
     // Smart availability fields
     private bool isFindingTimes = false;

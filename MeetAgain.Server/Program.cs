@@ -148,7 +148,6 @@ builder.Services.AddScoped(sp =>
     var authStateProvider = sp.GetRequiredService<CustomAuthStateProvider>();
     var svc = new AuthService(mongo, jwt);
     svc.AuthStateProvider = authStateProvider;
-    mongo.AuthStateProvider = authStateProvider;
     return svc;
 });
 

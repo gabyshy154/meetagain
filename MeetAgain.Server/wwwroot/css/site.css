@@ -5,56 +5,67 @@
    ============================================ */
 :root {
     color-scheme: light;
-    --primary: #5B3FD9;
-    --primary-rgb: 91, 63, 217;
-    --primary-dark: #4930B8;
-    --primary-light: #7C66ED;
+    --primary: #2F4858;
+    --primary-rgb: 47, 72, 88;
+    --primary-dark: #22363F;
+    --primary-light: #45606F;
     --secondary: #FF6B57;
     --accent: #FF6B57;
     --accent-text: #1C1A2E;
     --primary-text: #FFFFFF;
-    --ink: #1C1A2E;
-    --background: #F8F7FC;
+    --ink: #2F4858;
+    --background: #F8FAFC;
     --surface: #FFFFFF;
-    --border: #E4E1F0;
-    --slate: #605C78;
+    --border: #E2E8F0;
+    --slate: #45606F;
+    --text-secondary: #64748B;
+    --highlight: #DDFBEF;
     --success: #1E9E6A;
+    --success-solid: #14784F;
+    --success-text: #065F46;
     --danger: #D33A3A;
+    --danger-solid: #D33A3A;
+    --danger-surface: #FEE2E2;
+    --danger-text: #991B1B;
+    --info-surface: #DBEAFE;
+    --info-text: #1E40AF;
+    --warning-surface: #FEF3C7;
+    --warning-text: #92400E;
     --warning: #E8A317;
     --availability-low: #EDE9FE;
     --availability-mid: #A996F3;
     --availability-mid-text: #1C1A2E;
-    --availability-high: #5B3FD9;
+    --availability-high: #2F4858;
     --availability-high-text: #FFFFFF;
     --availability-low-text: #433783;
-    --gray-50: #F8F7FC;
-    --gray-100: #F1EFF8;
-    --gray-200: #E4E1F0;
-    --gray-300: #CBC7DC;
-    --gray-400: #A5A0B8;
-    --gray-500: #817C97;
-    --gray-600: #605C78;
-    --gray-700: #39364E;
-    --gray-900: #1C1A2E;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #7C8B99;
+    --gray-600: #64748B;
+    --gray-700: #334155;
+    --gray-900: #2F4858;
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-heading: 'Outfit', 'Inter', sans-serif;
-    --bs-primary: #5B3FD9;
-    --bs-primary-rgb: 91, 63, 217;
+    --font-heading: 'Manrope', 'Inter', sans-serif;
+    --bs-primary: #2F4858;
+    --bs-primary-rgb: 47, 72, 88;
     --bs-success-rgb: 30, 158, 106;
     --bs-danger-rgb: 211, 58, 58;
     --bs-warning-rgb: 232, 163, 23;
-    --bs-info-rgb: 96, 92, 120;
-    --bs-body-bg: #F8F7FC;
-    --bs-body-color: #1C1A2E;
-    --bs-border-color: #E4E1F0;
-    --bs-link-color: #5B3FD9;
-    --bs-link-hover-color: #4930B8;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 8px 24px rgba(28, 26, 46, 0.06);
-    --shadow-md: 0 12px 30px rgba(28, 26, 46, 0.09);
-    --shadow-lg: 0 24px 60px rgba(28, 26, 46, 0.12);
-    --radius: 8px;
-    --radius-lg: 12px;
+    --bs-info-rgb: 100, 116, 139;
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #2F4858;
+    --bs-border-color: #E2E8F0;
+    --bs-link-color: #2F4858;
+    --bs-link-hover-color: #22363F;
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.09);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+    --radius: 10px;
+    --radius-lg: 14px;
 }
 
 * {
@@ -305,6 +316,42 @@ main {
 }
 
 /* ============================================
+   BADGES
+   Shared by Meetups.razor and MeetupDetail.razor. These used to live
+   page-scoped in Meetups.razor only, which left MeetupDetail with bare
+   unstyled text and gave the two pages conflicting definitions.
+   ============================================ */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-primary {
+    background: var(--primary);
+    color: var(--primary-text);
+}
+
+.badge-success {
+    background: var(--success-solid);
+    color: var(--primary-text);
+}
+
+.badge-warning {
+    background: var(--warning-surface);
+    color: var(--warning-text);
+}
+
+.badge-gray {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+/* ============================================
    MEETUP CARDS
    ============================================ */
 .meetup-card {
@@ -388,20 +435,21 @@ button, .btn {
 .btn-secondary {
     background: white;
     color: var(--primary);
-    border: 2px solid var(--primary);
+    border: 2px solid var(--primary-light);
 }
 
 .btn-secondary:hover {
     background: var(--gray-50);
+    border-color: var(--primary);
 }
 
 .btn-success {
-    background: var(--success);
-    color: white;
+    background: var(--success-solid);
+    color: var(--primary-text);
 }
 
 .btn-success:hover {
-    background: #14784F;
+    background: var(--success);
 }
 
 .btn-outline {
@@ -413,6 +461,31 @@ button, .btn {
 .btn-outline:hover {
     border-color: var(--primary);
     color: var(--primary);
+}
+
+/* Destructive actions. --danger-solid is the fill that carries white text
+   (~4.7:1 light, ~6.5:1 dark); --danger is the lighter accent used for
+   outlines and text, which would fail contrast as a background. */
+.btn-danger {
+    background: var(--danger-solid);
+    color: #FFFFFF;
+    border: 2px solid var(--danger-solid);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+    background: var(--danger-surface);
+    border-color: var(--danger);
 }
 
 .btn-sm {
@@ -448,7 +521,8 @@ input[type="date"],
 textarea,
 select {
     width: 100%;
-    padding: 0.75rem;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 1rem;
@@ -463,7 +537,41 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(91, 63, 217, 0.14);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.14);
+}
+
+/* ============================================
+   ALERTS (shared — replaces per-page copies)
+   ============================================ */
+.alert {
+    padding: 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.alert-success {
+    background: var(--highlight);
+    color: var(--success-text);
+    border-left: 4px solid var(--success);
+}
+
+.alert-error {
+    background: var(--danger-surface);
+    color: var(--danger-text);
+    border-left: 4px solid var(--danger);
+}
+
+.alert-info {
+    background: var(--info-surface);
+    color: var(--info-text);
+    border-left: 4px solid #3B82F6;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
 }
 
 textarea {
@@ -611,48 +719,69 @@ textarea {
     border-radius: var(--radius-lg);
 }
 
+/* Dark mode: same slate design system, inverted for low light. The light-mode
+   palette is NOT reused here — on a dark surface it fails contrast badly
+   (#64748B text on #1C1933 is 3.6:1). */
 @media (prefers-color-scheme: dark) {
     :root {
         color-scheme: dark;
-        --primary: #9B86FF;
-        --primary-rgb: 155, 134, 255;
-        --primary-dark: #8068F0;
-        --primary-light: #B5A6FF;
-        --primary-text: #1C1A2E;
-        --bs-primary: #9B86FF;
-        --bs-primary-rgb: 155, 134, 255;
-        --bs-body-bg: #121022;
-        --bs-body-color: #F4F1FF;
-        --bs-border-color: #38334F;
-        --bs-link-color: #B5A6FF;
-        --bs-link-hover-color: #D0C5FF;
-        --ink: #F4F1FF;
-        --background: #121022;
-        --surface: #1C1933;
-        --border: #38334F;
-        --slate: #B7B1CB;
-        --gray-50: #1C1933;
-        --gray-100: #26223D;
-        --gray-200: #38334F;
-        --gray-300: #514B6A;
-        --gray-400: #77718F;
-        --gray-500: #9993AD;
-        --gray-600: #B7B1CB;
-        --gray-700: #D5D0E4;
-        --gray-900: #F4F1FF;
-        --availability-low: #2B2547;
-        --availability-mid: #6555A8;
-        --availability-mid-text: #FFFFFF;
-        --availability-high: #9B86FF;
-        --availability-high-text: #1C1A2E;
-        --availability-low-text: #EDE9FE;
+        --primary: #7FA3BC;
+        --primary-rgb: 127, 163, 188;
+        --primary-dark: #5D87A3;
+        --primary-light: #9FC0D4;
+        --primary-text: #0F1A21;
+        --bs-primary: #7FA3BC;
+        --bs-primary-rgb: 127, 163, 188;
+        --bs-body-bg: #0F1A21;
+        --bs-body-color: #E6EDF3;
+        --bs-border-color: #2B3B48;
+        --bs-link-color: #9FC0D4;
+        --bs-link-hover-color: #BFD8E8;
+        --ink: #E6EDF3;
+        --background: #0F1A21;
+        --surface: #16232C;
+        --border: #2B3B48;
+        --slate: #9FB3C1;
+        --text-secondary: #9FB3C1;
+        --highlight: #14332A;
+        --success: #34D399;
+        --success-solid: #34D399;
+        --success-text: #6EE7B7;
+        --danger: #F87171;
+        --danger-solid: #B91C1C;
+        --danger-surface: #3A1D1D;
+        --danger-text: #FCA5A5;
+        --info-surface: #16283B;
+        --info-text: #93C5FD;
+        --warning-surface: #38300F;
+        --warning-text: #FCD34D;
+        --warning: #FBBF24;
+        --gray-50: #16232C;
+        --gray-100: #1E2E38;
+        --gray-200: #2B3B48;
+        --gray-300: #3D5060;
+        --gray-400: #64798A;
+        --gray-500: #8A9EAD;
+        --gray-600: #9FB3C1;
+        --gray-700: #C3D1DB;
+        --gray-900: #E6EDF3;
+        --availability-low: #1E2E38;
+        --availability-mid: #45606F;
+        --availability-mid-text: #E6EDF3;
+        --availability-high: #7FA3BC;
+        --availability-high-text: #0F1A21;
+        --availability-low-text: #9FB3C1;
         --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.28);
         --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.34);
     }
 
-    .card, .stat-card, .meetup-card, .feature-card, .hero-section, .auth-card,
-    .modal-content, .calendar-day, .meetup-item {
+    /* Card surfaces deliberately absent: .meetup-item, .calendar-day, .modal-content,
+       .friends-selector, .meetup-preview etc. are defined in page-level <style> blocks,
+       which Blazor injects AFTER this stylesheet. At equal specificity the later rule
+       wins, so an override here silently loses. Those pages use var(--surface)
+       directly instead — keep it that way rather than adding them back here. */
+    .card, .stat-card, .meetup-card, .feature-card, .hero-section, .auth-card {
         background: var(--surface);
         border-color: var(--border);
         color: var(--gray-900);
@@ -674,6 +803,10 @@ textarea {
         color: var(--gray-900);
     }
 
+    .btn-secondary:hover {
+        border-color: var(--primary-light);
+    }
+
     .app-footer {
         background: var(--surface);
         color: var(--slate);
@@ -681,8 +814,7 @@ textarea {
     }
 
     .bg-primary,
-    .btn-primary,
-    .badge-primary {
+    .btn-primary {
         color: var(--primary-text) !important;
     }
 
@@ -699,6 +831,21 @@ textarea {
     .rsvp-declined {
         background: rgba(211, 58, 58, 0.2);
         color: #FF9999;
+    }
+
+    .alert-success {
+        background: var(--highlight);
+        color: var(--success-text);
+    }
+
+    .alert-error {
+        background: var(--danger-surface);
+        color: var(--danger-text);
+    }
+
+    .alert-info {
+        background: var(--info-surface);
+        color: var(--info-text);
     }
 }
 

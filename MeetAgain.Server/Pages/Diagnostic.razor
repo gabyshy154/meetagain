@@ -50,7 +50,7 @@
                         <div style="background: var(--gray-50); padding: 1rem; border-radius: var(--radius); font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto;">
                             @foreach (var friend in friendsData)
                             {
-                                <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 0.25rem;">
+                                <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: var(--surface); border-radius: 0.25rem;">
                                     <strong style="color: var(--primary);">@friend.Key:</strong>
                                     <br />
                                     <span style="color: var(--gray-700);">@friend.Value</span>
@@ -67,7 +67,7 @@
                         <div style="background: var(--gray-50); padding: 1rem; border-radius: var(--radius); font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto;">
                             @foreach (var meetup in meetupsData)
                             {
-                                <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 0.25rem;">
+                                <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: var(--surface); border-radius: 0.25rem;">
                                     <strong style="color: var(--success);">@meetup.Key:</strong>
                                     <br />
                                     <span style="color: var(--gray-700);">@meetup.Value</span>
@@ -206,8 +206,4 @@
     }
 }
 
-<style>
-    .alert-success { background: #D1FAE5; border-left: 4px solid var(--success); color: #065F46; }
-    .alert-error { background: #FEE2E2; border-left: 4px solid var(--danger); color: #991B1B; }
-    .alert-info { background: #DBEAFE; border-left: 4px solid #3B82F6; color: #1E40AF; }
-</style>
+<!-- .alert-* now come from site.css -->

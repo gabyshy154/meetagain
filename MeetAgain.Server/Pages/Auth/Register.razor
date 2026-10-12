@@ -130,7 +130,7 @@
 
     .auth-card {
         background: var(--surface);
-        border-radius: 28px;
+        border-radius: var(--radius-lg);
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.09);
         padding: clamp(1.5rem, 4vw, 3rem);
         width: 100%;
@@ -238,7 +238,7 @@
 
     .auth-divider span {
         position: relative;
-        background: white;
+        background: var(--surface);
         padding: 0 1rem;
         color: var(--gray-500);
         font-size: 0.875rem;
@@ -251,7 +251,7 @@
 
     .btn-social {
         width: 100%;
-        background: white;
+        background: var(--surface);
         border: 2px solid var(--gray-200);
         color: var(--gray-700);
         font-weight: 600;
@@ -286,31 +286,6 @@
 
     .link-primary:hover {
         text-decoration: underline;
-    }
-
-    .alert {
-        padding: 1rem;
-        border-radius: var(--radius);
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .alert-success {
-        background: #D1FAE5;
-        color: #065F46;
-        border-left: 4px solid var(--success);
-    }
-
-    .alert-error {
-        background: #FEE2E2;
-        color: #991B1B;
-        border-left: 4px solid var(--danger);
-    }
-
-    .alert-icon {
-        font-size: 1.25rem;
     }
 
     @@media (max-width: 640px) {
@@ -349,13 +324,13 @@
             
             if (success)
             {
-                successMessage = "Account created successfully! Redirecting to login...";
-                await Task.Delay(1500); // Show success message briefly
-                Nav.NavigateTo("/login");
+                // SignUpAsync already issues a JWT and sets auth state, so the user is
+                // authenticated here — go straight to the dashboard instead of /login.
+                Nav.NavigateTo("/dashboard", true);
             }
             else
             {
-                errorMessage = Auth.LastFirebaseError ?? "Registration failed. Please try again.";
+                errorMessage = Auth.LastAuthError ?? "Registration failed. Please try again.";
             }
         }
         catch (Exception ex)
