@@ -75,8 +75,7 @@
 
                         <button type="button"
                                 @onclick="ShowDeleteModal"
-                                class="btn btn-outline"
-                                style="color: var(--danger); border-color: var(--danger);">
+                                class="btn btn-danger-outline">
                             🗑️ Delete
                         </button>
                     </div>
@@ -295,7 +294,7 @@
     }
 
     .modal-content {
-        background: white;
+        background: var(--surface);
         padding: 2rem;
         border-radius: var(--radius-lg, 12px);
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);

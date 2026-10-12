@@ -82,7 +82,7 @@ else
                                     <small style="opacity: 0.9;">Owned by @group.OwnerName</small>
                                 }
                             </div>
-                            <span class="badge" style="background: white; color: var(--primary); font-weight: 600;">
+                            <span class="badge" style="background: var(--surface); color: var(--primary); font-weight: 600;">
                                 @group.MemberCount member@(group.MemberCount != 1 ? "s" : "")
                             </span>
                         </div>
@@ -132,7 +132,7 @@ else
                         <InputText @bind-Value="createModel.Name"
                                    class="form-control"
                                    placeholder="e.g., Book Club, Work Team, Family"
-                                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 0.5rem;" />
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius);" />
                     </div>
 
                     <div class="form-group">
@@ -141,7 +141,7 @@ else
                                        class="form-control"
                                        placeholder="What's this group for?"
                                        rows="3"
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 0.5rem;" />
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius);" />
                     </div>
 
                     @if (friends.Count > 0)
@@ -150,7 +150,7 @@ else
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                                 Add Members (@selectedFriendIds.Count selected)
                             </label>
-                            <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--gray-300); border-radius: 0.5rem; padding: 0.5rem;">
+                            <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--gray-300); border-radius: var(--radius); padding: 0.5rem;">
                                 @foreach (var friend in friends)
                                 {
                                     <label style="display: flex; align-items: center; padding: 0.5rem; cursor: pointer; border-radius: 0.25rem;">
@@ -208,7 +208,7 @@ else
                     <div style="max-height: 300px; overflow-y: auto;">
                         @foreach (var friend in availableFriendsToAdd)
                         {
-                            <label style="display: flex; align-items: center; padding: 0.75rem; cursor: pointer; border: 1px solid var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; padding: 0.75rem; cursor: pointer; border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 0.5rem;">
                                 <input type="checkbox"
                                        checked="@selectedFriendIds.Contains(friend.Id)"
                                        @onchange="@(e => ToggleFriendSelection(friend.Id, e))"
@@ -258,7 +258,7 @@ else
                 <div style="display: grid; gap: 0.5rem;">
                     @foreach (var member in groupDetails.Members)
                     {
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
                             <div>
                                 <div style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
                                     @member.Name
@@ -334,7 +334,7 @@ else
     }
 
     .modal-content {
-        background: white;
+        background: var(--surface);
         border-radius: var(--radius-lg);
         width: 100%;
         max-height: 80vh;

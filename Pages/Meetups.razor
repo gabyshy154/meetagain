@@ -229,7 +229,7 @@
 
     /* FIX: meetup-item is now a flex row (link area + action buttons) */
     .meetup-item {
-        background: white;
+        background: var(--surface);
         border: 2px solid var(--gray-200);
         border-radius: var(--radius-lg);
         padding: 1.5rem;
@@ -269,16 +269,8 @@
         margin: 0;
     }
 
-    .badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .badge-primary { background: var(--primary); color: white; }
-    .badge-warning  { background: var(--warning);  color: var(--ink); }
-    .badge-gray     { background: var(--gray-300);  color: var(--gray-700); }
+    /* .badge and its colour variants now live in site.css so MeetupDetail.razor
+       shares the same definitions instead of rendering unstyled text. */
 
     .meetup-item-description {
         color: var(--gray-600);
@@ -335,7 +327,7 @@
     }
 
     .modal-content {
-        background: white;
+        background: var(--surface);
         padding: 2rem;
         border-radius: var(--radius-lg, 12px);
         box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);

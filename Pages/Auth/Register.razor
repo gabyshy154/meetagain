@@ -173,7 +173,7 @@
 
     .auth-card {
         background: var(--surface);
-        border-radius: 28px;
+        border-radius: var(--radius-lg);
         box-shadow: var(--shadow-lg);
         padding: 3rem;
         width: 100%;
@@ -248,19 +248,6 @@
     .link-primary { color: var(--primary); text-decoration: none; font-weight: 700; }
     .link-primary:hover { text-decoration: underline; }
 
-    .alert {
-        padding: 1rem;
-        border-radius: var(--radius);
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .alert-success { background: #D1FAE5; color: #065F46; border-left: 4px solid var(--success); }
-    .alert-error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--danger); }
-    .alert-icon { font-size: 1.25rem; }
-
     .modal-backdrop {
         position: fixed;
         inset: 0;
@@ -273,7 +260,7 @@
     }
 
     .modal-card {
-        background: white;
+        background: var(--surface);
         border-radius: var(--radius-lg);
         padding: 2rem;
         width: 100%;

@@ -178,8 +178,8 @@ else
         min-height: 100px;
         padding: 0.5rem;
         border: 1px solid var(--gray-200);
-        border-radius: 0.5rem;
-        background: white;
+        border-radius: var(--radius);
+        background: var(--surface);
         transition: all 0.2s;
     }
 
@@ -220,12 +220,12 @@ else
     }
 
     .meetup-indicator.created {
-        background: #D1FAE5;
+        background: var(--highlight);
         border-left: 3px solid var(--success);
     }
 
     .meetup-indicator.invited {
-        background: #DBEAFE;
+        background: var(--info-surface);
         border-left: 3px solid var(--primary);
     }
 
@@ -249,7 +249,7 @@ else
 
     .meetup-card {
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius);
         border: 1px solid var(--gray-200);
         transition: all 0.2s ease;
     }
@@ -274,7 +274,7 @@ else
         padding: 0.5rem 1rem;
         background: var(--primary);
         color: white;
-        border-radius: 0.5rem;
+        border-radius: var(--radius);
         font-weight: 600;
         font-size: 0.875rem;
         transition: all 0.2s ease;
@@ -292,12 +292,12 @@ else
     }
 
     .legend-indicator.created {
-        background: #D1FAE5;
+        background: var(--highlight);
         border-left: 3px solid var(--success);
     }
 
     .legend-indicator.invited {
-        background: #DBEAFE;
+        background: var(--info-surface);
         border-left: 3px solid var(--primary);
     }
 
