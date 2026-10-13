@@ -1,0 +1,968 @@
+/* MeetAgain Enhanced Styles */
+
+/* ============================================
+   ROOT VARIABLES & RESET
+   ============================================ */
+:root {
+    color-scheme: light;
+    --primary: #2F4858;
+    --primary-rgb: 47, 72, 88;
+    --primary-dark: #22363F;
+    --primary-light: #45606F;
+    --secondary: #FF6B57;
+    --accent: #FF6B57;
+    --accent-text: #1C1A2E;
+    --primary-text: #FFFFFF;
+    --ink: #2F4858;
+    --background: #F8FAFC;
+    --surface: #FFFFFF;
+    --border: #E2E8F0;
+    --slate: #45606F;
+    --text-secondary: #64748B;
+    --highlight: #DDFBEF;
+    --success: #1E9E6A;
+    --success-solid: #14784F;
+    --success-text: #065F46;
+    --danger: #D33A3A;
+    --danger-solid: #D33A3A;
+    --danger-surface: #FEE2E2;
+    --danger-text: #991B1B;
+    --info-surface: #DBEAFE;
+    --info-text: #1E40AF;
+    --warning-surface: #FEF3C7;
+    --warning-text: #92400E;
+    --warning: #E8A317;
+    --availability-low: #EDE9FE;
+    --availability-mid: #A996F3;
+    --availability-mid-text: #1C1A2E;
+    --availability-high: #2F4858;
+    --availability-high-text: #FFFFFF;
+    --availability-low-text: #433783;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #7C8B99;
+    --gray-600: #64748B;
+    --gray-700: #334155;
+    --gray-900: #2F4858;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-heading: 'Manrope', 'Inter', sans-serif;
+    --bs-primary: #2F4858;
+    --bs-primary-rgb: 47, 72, 88;
+    --bs-success-rgb: 30, 158, 106;
+    --bs-danger-rgb: 211, 58, 58;
+    --bs-warning-rgb: 232, 163, 23;
+    --bs-info-rgb: 100, 116, 139;
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #2F4858;
+    --bs-border-color: #E2E8F0;
+    --bs-link-color: #2F4858;
+    --bs-link-hover-color: #22363F;
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.09);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+    --radius: 10px;
+    --radius-lg: 14px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--background);
+    color: var(--gray-900);
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6,
+.card-title, .section-title, .page-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--ink);
+}
+
+time, .meetup-date, .meetup-item-date, .meetup-item-time, .countdown-time {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   LAYOUT
+   ============================================ */
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.space-x-4 > * + * {
+    margin-left: 1rem;
+}
+
+.space-y-3 > * + * {
+    margin-top: 0.75rem;
+}
+
+.space-y-4 > * + * {
+    margin-top: 1rem;
+}
+
+.space-y-6 > * + * {
+    margin-top: 1.5rem;
+}
+
+/* ============================================
+   HEADER / NAVIGATION
+   ============================================ */
+header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 1rem 2rem;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+header strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+header nav a {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+header nav a:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.cursor-pointer:hover {
+    opacity: 0.9;
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+main {
+    padding: clamp(1.2rem, 2.5vw, 2.5rem);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ============================================
+   DASHBOARD LAYOUT
+   ============================================ */
+.dashboard-container {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.welcome-section {
+    background: var(--primary);
+    color: var(--primary-text);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 2rem;
+}
+
+.welcome-section h1,
+.welcome-section h2,
+.welcome-section h3 {
+    color: var(--primary-text);
+}
+
+.welcome-section h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.welcome-section p {
+    font-size: 1.125rem;
+    opacity: 0.95;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--surface);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--primary);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-card.friends {
+    border-left-color: var(--success);
+}
+
+.stat-card.groups {
+    border-left-color: var(--secondary);
+}
+
+.stat-card.upcoming {
+    border-left-color: var(--warning);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+}
+
+.stat-description {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-top: 0.5rem;
+}
+
+/* ============================================
+   CARDS & SECTIONS
+   ============================================ */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(8px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+}
+
+/* ============================================
+   BADGES
+   Shared by Meetups.razor and MeetupDetail.razor. These used to live
+   page-scoped in Meetups.razor only, which left MeetupDetail with bare
+   unstyled text and gave the two pages conflicting definitions.
+   ============================================ */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-primary {
+    background: var(--primary);
+    color: var(--primary-text);
+}
+
+.badge-success {
+    background: var(--success-solid);
+    color: var(--primary-text);
+}
+
+.badge-warning {
+    background: var(--warning-surface);
+    color: var(--warning-text);
+}
+
+.badge-gray {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+/* ============================================
+   MEETUP CARDS
+   ============================================ */
+.meetup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.meetup-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.meetup-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.meetup-date {
+    display: flex;
+    align-items: center;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.meetup-date::before {
+    content: "📅";
+    margin-right: 0.5rem;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+button, .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: var(--primary-text);
+}
+
+.btn-find-times {
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 700;
+}
+
+.btn-find-times:hover:not(:disabled) {
+    background: #F45D49;
+    color: var(--accent-text);
+    box-shadow: 0 8px 20px rgba(255, 107, 87, 0.24);
+    transform: translateY(-1px);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary-light);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+    border-color: var(--primary);
+}
+
+.btn-success {
+    background: var(--success-solid);
+    color: var(--primary-text);
+}
+
+.btn-success:hover {
+    background: var(--success);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Destructive actions. --danger-solid is the fill that carries white text
+   (~4.7:1 light, ~6.5:1 dark); --danger is the lighter accent used for
+   outlines and text, which would fail contrast as a background. */
+.btn-danger {
+    background: var(--danger-solid);
+    color: #FFFFFF;
+    border: 2px solid var(--danger-solid);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+    background: var(--danger-surface);
+    border-color: var(--danger);
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.813rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="time"],
+input[type="date"],
+textarea,
+select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.14);
+}
+
+/* ============================================
+   ALERTS (shared — replaces per-page copies)
+   ============================================ */
+.alert {
+    padding: 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.alert-success {
+    background: var(--highlight);
+    color: var(--success-text);
+    border-left: 4px solid var(--success);
+}
+
+.alert-error {
+    background: var(--danger-surface);
+    color: var(--danger-text);
+    border-left: 4px solid var(--danger);
+}
+
+.alert-info {
+    background: var(--info-surface);
+    color: var(--info-text);
+    border-left: 4px solid #3B82F6;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ============================================
+   EMPTY STATES
+   ============================================ */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--gray-300);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-description {
+    color: var(--gray-600);
+    margin-bottom: 1.5rem;
+}
+
+.rsvp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.rsvp-accepted {
+    background: rgba(30, 158, 106, 0.12);
+    color: #14784F;
+}
+
+.rsvp-maybe {
+    background: rgba(232, 163, 23, 0.16);
+    color: #805900;
+}
+
+.rsvp-declined {
+    background: rgba(211, 58, 58, 0.12);
+    color: #A62929;
+}
+
+.rsvp-other {
+    background: var(--gray-100);
+    color: var(--slate);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.loading-spinner {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--gray-200);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-container {
+    text-align: center;
+    padding: 3rem;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.text-gray-600 {
+    color: var(--gray-600);
+}
+
+.text-primary {
+    color: var(--primary);
+}
+
+.text-muted,
+.text-gray-600 {
+    color: var(--slate) !important;
+}
+
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+
+.max-w-xl {
+    max-width: 36rem;
+}
+
+.max-w-4xl {
+    max-width: 56rem;
+}
+
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.rounded {
+    border-radius: var(--radius);
+}
+
+.rounded-lg {
+    border-radius: var(--radius-lg);
+}
+
+/* Dark mode: same slate design system, inverted for low light. The light-mode
+   palette is NOT reused here — on a dark surface it fails contrast badly
+   (#64748B text on #1C1933 is 3.6:1). */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --primary: #7FA3BC;
+        --primary-rgb: 127, 163, 188;
+        --primary-dark: #5D87A3;
+        --primary-light: #9FC0D4;
+        --primary-text: #0F1A21;
+        --bs-primary: #7FA3BC;
+        --bs-primary-rgb: 127, 163, 188;
+        --bs-body-bg: #0F1A21;
+        --bs-body-color: #E6EDF3;
+        --bs-border-color: #2B3B48;
+        --bs-link-color: #9FC0D4;
+        --bs-link-hover-color: #BFD8E8;
+        --ink: #E6EDF3;
+        --background: #0F1A21;
+        --surface: #16232C;
+        --border: #2B3B48;
+        --slate: #9FB3C1;
+        --text-secondary: #9FB3C1;
+        --highlight: #14332A;
+        --success: #34D399;
+        --success-solid: #34D399;
+        --success-text: #6EE7B7;
+        --danger: #F87171;
+        --danger-solid: #B91C1C;
+        --danger-surface: #3A1D1D;
+        --danger-text: #FCA5A5;
+        --info-surface: #16283B;
+        --info-text: #93C5FD;
+        --warning-surface: #38300F;
+        --warning-text: #FCD34D;
+        --warning: #FBBF24;
+        --gray-50: #16232C;
+        --gray-100: #1E2E38;
+        --gray-200: #2B3B48;
+        --gray-300: #3D5060;
+        --gray-400: #64798A;
+        --gray-500: #8A9EAD;
+        --gray-600: #9FB3C1;
+        --gray-700: #C3D1DB;
+        --gray-900: #E6EDF3;
+        --availability-low: #1E2E38;
+        --availability-mid: #45606F;
+        --availability-mid-text: #E6EDF3;
+        --availability-high: #7FA3BC;
+        --availability-high-text: #0F1A21;
+        --availability-low-text: #9FB3C1;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.28);
+        --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.34);
+    }
+
+    /* Card surfaces deliberately absent: .meetup-item, .calendar-day, .modal-content,
+       .friends-selector, .meetup-preview etc. are defined in page-level <style> blocks,
+       which Blazor injects AFTER this stylesheet. At equal specificity the later rule
+       wins, so an override here silently loses. Those pages use var(--surface)
+       directly instead — keep it that way rather than adding them back here. */
+    .card, .stat-card, .meetup-card, .feature-card, .hero-section, .auth-card {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--gray-900);
+    }
+
+    input, textarea, select, .form-control {
+        background-color: var(--surface) !important;
+        border-color: var(--border) !important;
+        color: var(--gray-900) !important;
+    }
+
+    input::placeholder, textarea::placeholder {
+        color: var(--gray-500);
+    }
+
+    .empty-state, .btn-outline, .btn-secondary, .suggestion-item {
+        background-color: var(--gray-100);
+        border-color: var(--border);
+        color: var(--gray-900);
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--primary-light);
+    }
+
+    .app-footer {
+        background: var(--surface);
+        color: var(--slate);
+        border-color: var(--border);
+    }
+
+    .bg-primary,
+    .btn-primary {
+        color: var(--primary-text) !important;
+    }
+
+    .rsvp-accepted {
+        background: rgba(30, 158, 106, 0.2);
+        color: #72D6A8;
+    }
+
+    .rsvp-maybe {
+        background: rgba(232, 163, 23, 0.2);
+        color: #FFD36A;
+    }
+
+    .rsvp-declined {
+        background: rgba(211, 58, 58, 0.2);
+        color: #FF9999;
+    }
+
+    .alert-success {
+        background: var(--highlight);
+        color: var(--success-text);
+    }
+
+    .alert-error {
+        background: var(--danger-surface);
+        color: var(--danger-text);
+    }
+
+    .alert-info {
+        background: var(--info-surface);
+        color: var(--info-text);
+    }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 768px) {
+    main {
+        padding: 1rem;
+    }
+
+    header {
+        padding: 1rem;
+    }
+
+    header strong {
+        font-size: 1.25rem;
+    }
+
+    header nav {
+        display: none; /* Consider adding a mobile menu */
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .welcome-section h1 {
+        font-size: 1.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* == Bootstrap components on the slate theme (dark-mode fix) ==
+   Bootstrap hard-codes white for list groups and modals, which hides the
+   light text the dark theme uses. Point them at the theme tokens instead. */
+.list-group-item,
+.list-group-item-action {
+    background-color: var(--surface);
+    color: var(--ink);
+    border-color: var(--border);
+}
+
+.list-group-item-action:hover,
+.list-group-item-action:focus,
+.list-group-item-action:active {
+    background-color: var(--highlight);
+    color: var(--ink);
+}
+
+.list-group-item .text-muted,
+.modal-body .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.modal-content {
+    background-color: var(--surface);
+    color: var(--ink);
+    border-color: var(--border);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--border);
+}
+
+.modal-title {
+    color: var(--gray-900);
+}
+
+@media (prefers-color-scheme: dark) {
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+}

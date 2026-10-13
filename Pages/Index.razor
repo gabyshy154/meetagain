@@ -1,0 +1,199 @@
+@page "/"
+@inject NavigationManager Nav
+@inject AuthService Auth
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="landing-container">
+    <!-- Hero Section -->
+    <div class="hero-section fade-in">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Welcome to <span class="gradient-text">MeetAgain</span>
+            </h1>
+            <p class="hero-subtitle">
+                Schedule meetups with friends — fast, easy, and beautifully organized.
+            </p>
+            
+            <div class="hero-actions">
+                <a href="/register" class="btn btn-primary btn-lg">
+                    Get Started
+                </a>
+                <a href="/login" class="btn btn-outline btn-lg">
+                    Login
+                </a>
+            </div>
+        </div>
+
+        <!-- Feature Highlights -->
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3 class="feature-title">Easy Scheduling</h3>
+                <p class="feature-description">
+                    Create and manage meetups with just a few clicks
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3 class="feature-title">Connect with Friends</h3>
+                <p class="feature-description">
+                    Add friends and organize group activities effortlessly
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📆</div>
+                <h3 class="feature-title">Calendar View</h3>
+                <p class="feature-description">
+                    See all your meetups at a glance in one place
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">👨‍👩‍👧‍👦</div>
+                <h3 class="feature-title">Groups</h3>
+                <p class="feature-description">
+                    Create groups for recurring meetups with the same people
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .landing-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 1.5rem 0 3rem;
+    }
+
+    .hero-section {
+        text-align: center;
+        padding: clamp(2rem, 5vw, 4rem) 1.25rem 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    }
+
+    .hero-content {
+        margin-bottom: 3rem;
+    }
+
+    .hero-title {
+        font-size: clamp(2.6rem, 6vw, 4.6rem);
+        font-weight: 800;
+        line-height: 1.08;
+        margin-bottom: 1rem;
+        letter-spacing: -0.06em;
+        color: var(--gray-900);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-subtitle {
+        font-size: clamp(1.1rem, 2vw, 1.5rem);
+        color: var(--gray-600);
+        margin: 0 auto 2rem;
+        max-width: 680px;
+        line-height: 1.6;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .hero-actions a {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .feature-card {
+        background: var(--surface);
+        padding: 2rem 1.5rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        text-align: center;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 36px rgba(var(--primary-rgb), 0.08);
+    }
+
+    .feature-icon {
+        font-size: 2.7rem;
+        margin-bottom: 1rem;
+        filter: drop-shadow(0 8px 16px rgba(var(--primary-rgb), 0.12));
+    }
+
+    .feature-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.6rem;
+    }
+
+    .feature-description {
+        color: var(--gray-600);
+        line-height: 1.6;
+        font-size: 0.96rem;
+    }
+
+    @@media (max-width: 768px) {
+        .landing-container {
+            padding-top: 0.5rem;
+        }
+
+        .hero-section {
+            border-radius: var(--radius-lg);
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            if (principal?.Identity?.IsAuthenticated == true)
+            {
+                // Already logged in → go straight to dashboard
+                Nav.NavigateTo("/dashboard", true);
+            }
+            // If not authenticated, do nothing: stay on welcome page
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Index: Error checking auth - {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,376 @@
+﻿@using Microsoft.JSInterop
+@using MeetAgain.Server.Services
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject AuthService Auth
+@inject NotificationService NotificationService
+@implements IDisposable
+
+<div class="min-h-screen flex flex-col">
+    <header>
+        <div class="header-container">
+            <div class="cursor-pointer logo-section" @onclick="GoHome">
+                <strong>🤝 MeetAgain</strong>
+            </div>
+            <nav class="nav-section">
+                <AuthorizeView>
+                    <NotAuthorized>
+                        <a class="nav-link" href="/login">Login</a>
+                        <a class="nav-link btn-get-started" href="/register">Get Started</a>
+                    </NotAuthorized>
+                    <Authorized>
+                        <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">🏠</span> 
+                            <span class="nav-text">Dashboard</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="/meetups" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">📅</span> 
+                            <span class="nav-text">Meetups</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="/friends" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">👥</span> 
+                            <span class="nav-text">Friends</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="/groups" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">👨‍👩‍👧‍👦</span> 
+                            <span class="nav-text">Groups</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="/calendar" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">📆</span> 
+                            <span class="nav-text">Calendar</span>
+                        </NavLink>
+                        <NavLink class="nav-link notification-link" href="/notifications" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon" style="position: relative;">
+                                🔔
+                                @if (unreadCount > 0)
+                                {
+                                    <span class="notification-badge">
+                                        @(unreadCount > 9 ? "9+" : unreadCount.ToString())
+                                    </span>
+                                }
+                            </span>
+                            <span class="nav-text">Notifications</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="/settings/availability" Match="NavLinkMatch.Prefix">
+                            <span class="nav-icon">⏰</span> 
+                            <span class="nav-text">Availability</span>
+                        </NavLink>
+                        <button type="button"
+                                class="btn-logout"
+                                onclick="handleLogout()">
+                            <span class="logout-icon">🚪</span>
+                            <span>Logout</span>
+                        </button>
+                    </Authorized>
+                </AuthorizeView>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1">
+        @Body
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; @DateTime.Now.Year MeetAgain. Built with ❤️ for bringing people together.</p>
+    </footer>
+</div>
+
+<style>
+    header {
+        background: var(--surface);
+        padding: 0;
+        box-shadow: 0 6px 24px rgba(28, 26, 46, 0.06);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        gap: 1rem;
+    }
+
+    .logo-section {
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+    }
+
+    .logo-section:hover {
+        transform: translateY(-1px);
+        background: var(--gray-50);
+    }
+
+    .logo-section strong {
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: -0.6px;
+        text-shadow: none;
+    }
+
+    .nav-section {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.6rem 0.8rem;
+        color: var(--slate);
+        text-decoration: none;
+        border-radius: 999px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 0.88rem;
+        position: relative;
+    }
+
+    .nav-link:hover {
+        background: var(--gray-50);
+        color: var(--primary);
+        transform: translateY(-1px);
+    }
+
+    .nav-link.active {
+        color: var(--primary-text);
+        background: var(--primary);
+        box-shadow: 0 6px 14px rgba(var(--primary-rgb), 0.2);
+    }
+
+    .nav-link:active {
+        transform: translateY(0);
+    }
+
+    .nav-icon {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .nav-text {
+        display: inline-block;
+    }
+
+    .btn-get-started {
+        background: white !important;
+        color: var(--primary) !important;
+        padding: 0.7rem 1.2rem !important;
+        font-weight: 700;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+    }
+
+    .btn-get-started:hover {
+        background: rgba(255, 255, 255, 0.96) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+    }
+
+    .btn-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1rem;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.2);
+        margin-left: 0.35rem;
+    }
+
+    .btn-logout:hover {
+        background: rgba(220, 38, 38, 1);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(220, 38, 38, 0.25);
+    }
+
+    .logout-icon {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .notification-link .nav-icon {
+        position: relative;
+        display: inline-block;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: -7px;
+        right: -10px;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-size: 0.62rem;
+        font-weight: 800;
+        padding: 0.15rem 0.38rem;
+        border-radius: 999px;
+        line-height: 1.2;
+        min-width: 18px;
+        text-align: center;
+        animation: pulse-badge 2s ease-in-out infinite;
+        box-shadow: 0 4px 10px rgba(255, 107, 87, 0.3);
+        border: 2px solid var(--surface);
+    }
+
+    @@keyframes pulse-badge {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.08);
+        }
+    }
+
+    .app-footer {
+        background: var(--surface);
+        padding: 1.55rem 1rem;
+        text-align: center;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+        border-top: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+    }
+
+    .app-footer p {
+        margin: 0;
+    }
+
+    @@media (max-width: 1024px) {
+        .header-container {
+            padding: 1rem;
+        }
+
+        .nav-link {
+            padding: 0.45rem 0.7rem;
+            font-size: 0.82rem;
+        }
+
+        .nav-text {
+            display: none;
+        }
+
+        .nav-icon {
+            font-size: 1.15rem;
+        }
+
+        .btn-logout {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .header-container {
+            flex-direction: column;
+            gap: 0.9rem;
+            padding: 0.85rem 1rem;
+        }
+
+        .nav-section {
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .logo-section strong {
+            font-size: 1.25rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .nav-link {
+            padding: 0.5rem 0.65rem;
+        }
+
+        .btn-logout {
+            width: 100%;
+            justify-content: center;
+            margin-left: 0;
+            margin-top: 0.25rem;
+        }
+    }
+
+    .nav-link:focus,
+    .btn-logout:focus {
+        outline: 2px solid var(--primary-light);
+        outline-offset: 2px;
+    }
+</style>
+
+<script>
+    async function handleLogout() {
+        console.log("Logout clicked via JS");
+        
+        // Clear local storage (where the token is stored)
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Call Firebase logout
+        if (typeof logout === 'function') {
+            await logout();
+            console.log("Firebase signOut complete");
+        }
+        
+        // Force full page reload to login page
+        window.location.replace('/login');
+    }
+</script>
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+    
+    private int unreadCount = 0;
+    private System.Threading.Timer? timer;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateUnreadCount();
+        
+        // Poll for new notifications every 30 seconds
+        timer = new System.Threading.Timer(async _ =>
+        {
+            await UpdateUnreadCount();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+    
+    private async Task UpdateUnreadCount()
+    {
+        try
+        {
+            unreadCount = await NotificationService.GetUnreadCountAsync();
+        }
+        catch
+        {
+            // User might not be logged in
+            unreadCount = 0;
+        }
+    }
+    
+    private void GoHome() => Nav.NavigateTo("/");
+    
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}

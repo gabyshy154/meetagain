@@ -1,0 +1,114 @@
+﻿@using MeetAgain.Server.Services
+@inject NotificationService NotificationService
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">MeetAgain</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="meetups">
+                <span class="bi bi-calendar-event-nav-menu" aria-hidden="true"></span> Meetups
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="calendar">
+                <span class="bi bi-calendar3-nav-menu" aria-hidden="true"></span> Calendar
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="friends">
+                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Friends
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="groups">
+                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Groups
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="notifications">
+                <span class="bi bi-bell-fill-nav-menu position-relative" aria-hidden="true">
+                    @if (unreadCount > 0)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              style="font-size: 0.6rem;">
+                            @(unreadCount > 9 ? "9+" : unreadCount.ToString())
+                        </span>
+                    }
+                </span> 
+                Notifications
+                @if (unreadCount > 0)
+                {
+                    <span class="badge bg-danger rounded-pill ms-2">@unreadCount</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="settings/availability">
+                <span class="bi bi-clock-history-nav-menu" aria-hidden="true"></span> Availability
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private int unreadCount = 0;
+    private System.Threading.Timer? timer;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateUnreadCount();
+        
+        // Poll for new notifications every 30 seconds
+        timer = new System.Threading.Timer(async _ =>
+        {
+            await UpdateUnreadCount();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task UpdateUnreadCount()
+    {
+        try
+        {
+            unreadCount = await NotificationService.GetUnreadCountAsync();
+        }
+        catch
+        {
+            // User might not be logged in
+            unreadCount = 0;
+        }
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}
