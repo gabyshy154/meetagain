@@ -25,8 +25,17 @@ public class UsersController : ControllerBase
     [HttpPost("me")]
     public async Task<IActionResult> SaveMe([FromBody] CreateProfileRequest req)
     {
+        // NEW – Stage D: cap the display name length
+        if (req.DisplayName?.Trim().Length > 100)
+            return BadRequest("Display name too long.");
+
         var uid = User.GetUid();
-        var email = User.FindFirst("email")?.Value ?? req.Email ?? "";
+
+        // NEW – Stage D: the email comes ONLY from the verified token, never from the request body
+        var email = User.FindFirst("email")?.Value;
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest("Token has no email.");
+
         var existing = await _fs.GetUserAsync(uid);
 
         var profile = new AppUser

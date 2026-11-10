@@ -1,5 +1,4 @@
 @page "/dashboard"
-@using Google.Cloud.Firestore
 @using MeetAgain.Server.Models
 @using MeetAgain.Server.Services
 @inject MeetupService MeetupService
@@ -8,7 +7,7 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
-@inject FirestoreDb FirestoreDb
+@inject ApiClient ApiClient
 
 <PageTitle>Dashboard - MeetAgain</PageTitle>
 
@@ -472,14 +471,13 @@ else
             {
                 try
                 {
-                    var userDoc = await FirestoreDb.Collection("users").Document(userId).GetSnapshotAsync();
-                    if (userDoc.Exists)
+                    var profile = await ApiClient.GetAsync<MeetAgain.Server.Models.AppUser>("api/users/me");
+                    if (profile != null)
                     {
-                        var userData = userDoc.ToDictionary();
-                        if (userData.TryGetValue("DisplayName", out var dn) && !string.IsNullOrWhiteSpace(dn?.ToString()))
-                            displayName = dn.ToString()!;
-                        else if (userData.TryGetValue("Email", out var em) && !string.IsNullOrWhiteSpace(em?.ToString()))
-                            displayName = em.ToString()!;
+                        if (!string.IsNullOrWhiteSpace(profile.DisplayName))
+                            displayName = profile.DisplayName;
+                        else if (!string.IsNullOrWhiteSpace(profile.Email))
+                            displayName = profile.Email;
                     }
                     else
                     {

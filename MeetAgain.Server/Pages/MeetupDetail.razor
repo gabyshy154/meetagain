@@ -1,6 +1,6 @@
 @page "/meetups/{MeetupId}"
 @inject MeetupService MeetupService
-@inject FirestoreService FirestoreService
+@* meetups are loaded through MeetupService (the API) *@
 @inject AuthService Auth
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
@@ -367,7 +367,7 @@
 
         try
         {
-            meetup = await FirestoreService.GetMeetupByIdAsync(MeetupId);
+            meetup = await MeetupService.GetMeetupByIdAsync(MeetupId);
 
             if (meetup != null)
             {

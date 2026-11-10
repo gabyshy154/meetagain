@@ -1,10 +1,20 @@
 using System.Security.Claims;
-using FirebaseAdmin.Auth;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 namespace MeetAgain.Server.Services
 {
+    /// <summary>
+    /// Keeps the signed-in user's Firebase ID token in protected browser storage and
+    /// turns it into the user's claims for the UI.
+    ///
+    /// Stage D: the web server no longer holds the Firebase Admin key, so it no longer
+    /// verifies token signatures. It checks expiry, issuer and audience, and reads the claims.
+    /// The token lives in ASP.NET Data Protection storage, which the browser cannot forge, and
+    /// MeetAgain.Api verifies the real signature on every call, so all data access is still enforced there.
+    /// </summary>
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         private const string TokenKey      = "authToken";
@@ -14,18 +24,21 @@ namespace MeetAgain.Server.Services
         private readonly ProtectedSessionStorage _session;
         // Local storage    → persists across browser restarts
         private readonly ProtectedLocalStorage   _local;
+        private readonly string _projectId;
 
         private string? _token;
 
-        /// <summary>The current Firebase ID token (NEW – Stage C1). Used by ApiClient to call the API.</summary>
+        /// <summary>The current Firebase ID token. Used by ApiClient to call the API.</summary>
         public string? Token => _token;
 
         public CustomAuthStateProvider(
             ProtectedSessionStorage session,
-            ProtectedLocalStorage   local)
+            ProtectedLocalStorage   local,
+            IConfiguration          config)
         {
-            _session = session;
-            _local   = local;
+            _session   = session;
+            _local     = local;
+            _projectId = config["Firebase:ProjectId"] ?? "";
         }
 
         // ── Public API ────────────────────────────────────────────────────────
@@ -102,16 +115,11 @@ namespace MeetAgain.Server.Services
                 if (string.IsNullOrWhiteSpace(_token))
                     return anonymous;
 
-                // Validate with Firebase
-                FirebaseToken decoded;
-                try
+                // Check expiry / issuer / audience and read the claims
+                if (!TryReadToken(_token, out var uid, out var email))
                 {
-                    decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(_token);
-                }
-                catch (FirebaseAdmin.Auth.FirebaseAuthException ex)
-                {
-                    // Token expired or revoked — clean up both stores
-                    Console.WriteLine($"AuthStateProvider: token invalid ({ex.AuthErrorCode}), clearing");
+                    // Token expired or not ours — clean up both stores
+                    Console.WriteLine("AuthStateProvider: token invalid or expired, clearing");
                     _token = null;
                     await TryDelete(_session, TokenKey);
                     await TryDelete(_local,   TokenKey);
@@ -119,15 +127,12 @@ namespace MeetAgain.Server.Services
                     return anonymous;
                 }
 
-                decoded.Claims.TryGetValue("email", out var emailObj);
-                var email = emailObj?.ToString() ?? string.Empty;
-
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, decoded.Uid ?? string.Empty),
+                    new Claim(ClaimTypes.NameIdentifier, uid),
                     new Claim(ClaimTypes.Email,          email),
                     // Keep "user_id" claim so CurrentUserAccessor keeps working
-                    new Claim("user_id",                 decoded.Uid ?? string.Empty)
+                    new Claim("user_id",                 uid)
                 };
 
                 var identity  = new ClaimsIdentity(claims, "firebase");
@@ -144,6 +149,55 @@ namespace MeetAgain.Server.Services
                 await TryDelete(_local,   RememberMeKey);
                 return anonymous;
             }
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+
+        /// <summary>Reads uid/email from a Firebase ID token and checks expiry, issuer and audience.</summary>
+        private bool TryReadToken(string token, out string uid, out string email)
+        {
+            uid = "";
+            email = "";
+            try
+            {
+                var parts = token.Split('.');
+                if (parts.Length != 3) return false;
+
+                using var doc = JsonDocument.Parse(Base64UrlDecode(parts[1]));
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("exp", out var expEl) || !expEl.TryGetInt64(out var exp)) return false;
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= exp) return false;
+
+                if (!string.IsNullOrEmpty(_projectId))
+                {
+                    if (!root.TryGetProperty("aud", out var aud) || aud.GetString() != _projectId) return false;
+                    if (!root.TryGetProperty("iss", out var iss) ||
+                        iss.GetString() != $"https://securetoken.google.com/{_projectId}") return false;
+                }
+
+                if (root.TryGetProperty("user_id", out var u))       uid = u.GetString() ?? "";
+                else if (root.TryGetProperty("sub", out var s))      uid = s.GetString() ?? "";
+                if (string.IsNullOrEmpty(uid)) return false;
+
+                if (root.TryGetProperty("email", out var e)) email = e.GetString() ?? "";
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static byte[] Base64UrlDecode(string input)
+        {
+            var s = input.Replace('-', '+').Replace('_', '/');
+            switch (s.Length % 4)
+            {
+                case 2: s += "=="; break;
+                case 3: s += "=";  break;
+            }
+            return Convert.FromBase64String(s);
         }
 
         // ── Helper: swallow errors on Delete (key may not exist) ─────────────

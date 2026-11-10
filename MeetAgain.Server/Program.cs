@@ -1,6 +1,3 @@
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
-using Google.Cloud.Firestore;
 using MeetAgain.Server.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -8,59 +5,22 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------
-// Load Firebase settings
-// Server (AWS): base64 of the service-account JSON in FIREBASE_CREDENTIALS_B64
-//               (base64 survives Elastic Beanstalk's env-var packing; raw JSON does not)
-// Laptop:       falls back to the file named in appsettings.json
+// Settings. The web server holds NO Firebase service-account key and does
+// not talk to Firestore: all data goes through MeetAgain.Api.
+//   Firebase:ApiKey    public Firebase web key (login / sign-up REST calls)
+//   Firebase:ProjectId used to check the token's issuer/audience
+//   Api:BaseUrl        where MeetAgain.Api lives (on AWS: environment property Api__BaseUrl)
 // ------------------------------------------------------
-var credentialsB64  = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_B64");
-var credentialsJson = !string.IsNullOrWhiteSpace(credentialsB64)
-    ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(credentialsB64.Trim()))
-    : Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS");
-var credentialsPath = builder.Configuration["Firebase:CredentialsFile"];
-var projectId       = builder.Configuration["Firebase:ProjectId"];
-var apiKey          = builder.Configuration["Firebase:ApiKey"];
+var apiKey     = builder.Configuration["Firebase:ApiKey"];
+var projectId  = builder.Configuration["Firebase:ProjectId"];
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
 
-if (string.IsNullOrWhiteSpace(credentialsJson) && string.IsNullOrWhiteSpace(credentialsPath))
-    throw new Exception("Set FIREBASE_CREDENTIALS_B64 or Firebase:CredentialsFile");
-if (string.IsNullOrWhiteSpace(projectId))
-    throw new Exception("Missing Firebase:ProjectId");
 if (string.IsNullOrWhiteSpace(apiKey))
     throw new Exception("Missing Firebase:ApiKey");
-
-// ------------------------------------------------------
-// Initialize Firebase Admin SDK
-// ------------------------------------------------------
-GoogleCredential googleCred;
-if (!string.IsNullOrWhiteSpace(credentialsJson))
-{
-    googleCred = GoogleCredential.FromJson(credentialsJson);
-}
-else
-{
-    using var stream = new FileStream(credentialsPath!, FileMode.Open, FileAccess.Read);
-    googleCred = GoogleCredential.FromStream(stream);
-}
-googleCred = googleCred.CreateScoped("https://www.googleapis.com/auth/cloud-platform");
-
-if (FirebaseApp.DefaultInstance == null)
-{
-    FirebaseApp.Create(new AppOptions
-    {
-        Credential = googleCred
-    });
-}
-
-// ------------------------------------------------------
-// Firestore
-// ------------------------------------------------------
-var firestoreDb = new FirestoreDbBuilder
-{
-    ProjectId  = projectId,
-    Credential = googleCred
-}.Build();
-
-builder.Services.AddSingleton(firestoreDb);
+if (string.IsNullOrWhiteSpace(projectId))
+    throw new Exception("Missing Firebase:ProjectId");
+if (string.IsNullOrWhiteSpace(apiBaseUrl))
+    throw new Exception("Missing Api:BaseUrl");
 
 // ------------------------------------------------------
 // Blazor & Authentication
@@ -87,12 +47,8 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 builder.Services.AddAuthorizationCore();
 
 // ------------------------------------------------------
-// MeetAgain API client (NEW – Stage C1)
-// Base address comes from appsettings.json "Api:BaseUrl"
-// (on AWS: environment property Api__BaseUrl)
+// MeetAgain API client
 // ------------------------------------------------------
-var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
-    ?? throw new Exception("Missing Api:BaseUrl");
 builder.Services.AddHttpClient<ApiClient>(c =>
 {
     c.BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/");
@@ -100,17 +56,14 @@ builder.Services.AddHttpClient<ApiClient>(c =>
 });
 
 // ------------------------------------------------------
-// App Services
+// App Services (all talk to the API)
 // ------------------------------------------------------
-builder.Services.AddScoped<FirestoreService>();
-
 builder.Services.AddScoped(sp =>
 {
-    var fs                = sp.GetRequiredService<FirestoreService>();
+    var api               = sp.GetRequiredService<ApiClient>();
     var authStateProvider = sp.GetRequiredService<CustomAuthStateProvider>();
-    var svc               = new AuthService(fs, apiKey);
+    var svc               = new AuthService(api, apiKey);
     svc.AuthStateProvider = authStateProvider;
-    fs.AuthStateProvider  = authStateProvider;
     return svc;
 });
 

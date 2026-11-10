@@ -1,14 +1,18 @@
-using FirebaseAdmin.Auth;
-using Google.Cloud.Firestore;
 using MeetAgain.Server.Models;
+using MeetAgain.Shared.Contracts;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace MeetAgain.Server.Services
 {
+    /// <summary>
+    /// Sign-up, login and password reset for the web app (Stage D).
+    /// Talks to Firebase's public REST endpoints (needs only the public web API key)
+    /// and to MeetAgain.Api for the user's profile. No Admin SDK, no service-account key.
+    /// </summary>
     public class AuthService
     {
-        private readonly FirestoreService _fs;
+        private readonly ApiClient _api;
         private readonly HttpClient _http = new();
         private readonly string _apiKey;
 
@@ -18,62 +22,72 @@ namespace MeetAgain.Server.Services
         public CustomAuthStateProvider? AuthStateProvider { get; set; }
         public string? LastFirebaseError { get; private set; }
 
-        public AuthService(FirestoreService fs, string firebaseApiKey)
+        public AuthService(ApiClient api, string firebaseApiKey)
         {
-            _fs      = fs              ?? throw new ArgumentNullException(nameof(fs));
-            _apiKey  = firebaseApiKey  ?? throw new ArgumentNullException(nameof(firebaseApiKey));
+            _api    = api             ?? throw new ArgumentNullException(nameof(api));
+            _apiKey = firebaseApiKey  ?? throw new ArgumentNullException(nameof(firebaseApiKey));
         }
 
         // ── REGISTER ──────────────────────────────────────────────────────────
         public async Task<bool> SignUpAsync(string email, string password, string displayName)
         {
-            UserRecord? fbUser = null;
+            string idToken;
             try
             {
-                fbUser = await FirebaseAuth.DefaultInstance.CreateUserAsync(new UserRecordArgs
+                var url = $"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={_apiKey}";
+                var response = await _http.PostAsJsonAsync(url, new { email, password, returnSecureToken = true });
+                var raw = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    Email       = email,
-                    Password    = password,
-                    DisplayName = displayName
-                });
-            }
-            catch (FirebaseAuthException ex) when (ex.AuthErrorCode == AuthErrorCode.EmailAlreadyExists)
-            {
-                LastFirebaseError = "Email already exists.";
-                Console.WriteLine("Registration failed: " + LastFirebaseError);
-                return false;
+                    LastFirebaseError = ParseFirebaseError(raw);
+                    Console.WriteLine("Registration failed: " + LastFirebaseError);
+                    return false;
+                }
+
+                var json = JsonDocument.Parse(raw).RootElement;
+                idToken = json.TryGetProperty("idToken", out var t) ? t.GetString() ?? "" : "";
+                if (string.IsNullOrWhiteSpace(idToken))
+                {
+                    LastFirebaseError = "Unexpected response from Firebase. Please try again.";
+                    return false;
+                }
             }
             catch (Exception ex)
             {
-                LastFirebaseError = "Firebase registration failed: " + ex.Message;
-                Console.WriteLine(LastFirebaseError);
+                LastFirebaseError = "A network error occurred. Please try again.";
+                Console.WriteLine("Registration exception: " + ex.Message);
                 return false;
             }
 
-            var user = new AppUser
-            {
-                Uid         = fbUser.Uid,
-                Email       = fbUser.Email ?? email,
-                DisplayName = displayName,
-                CreatedAt   = DateTime.UtcNow.ToString("o")
-            };
-
+            // Best effort: store the display name on the Firebase account too
             try
             {
-                await _fs.CreateOrUpdateUserAsync(user);
+                var url = $"https://identitytoolkit.googleapis.com/v1/accounts:update?key={_apiKey}";
+                await _http.PostAsJsonAsync(url, new { idToken, displayName, returnSecureToken = false });
             }
-            catch (Exception ex)
+            catch { /* the profile in Firestore is what the app actually uses */ }
+
+            // Create the profile through the API
+            var result = await _api.SendWithTokenAsync<AppUser>(idToken, HttpMethod.Post, "api/users/me",
+                new CreateProfileRequest { DisplayName = displayName, Email = email });
+
+            if (!result.Ok || result.Value == null)
             {
-                // Roll back the Firebase Auth record so the email isn't permanently locked
-                try { await FirebaseAuth.DefaultInstance.DeleteUserAsync(fbUser.Uid); }
+                // Roll back the Firebase account so the email isn't permanently locked
+                try
+                {
+                    var url = $"https://identitytoolkit.googleapis.com/v1/accounts:delete?key={_apiKey}";
+                    await _http.PostAsJsonAsync(url, new { idToken });
+                }
                 catch { /* ignore rollback failure */ }
 
-                LastFirebaseError = "Failed to write user to Firestore: " + ex.Message;
-                Console.WriteLine(LastFirebaseError);
+                LastFirebaseError = "Could not create your profile. Please try again.";
+                Console.WriteLine($"Registration failed: profile creation returned status {result.Status}");
                 return false;
             }
 
-            CurrentUser       = user;
+            CurrentUser       = result.Value;
             LastFirebaseError = null;
             Console.WriteLine($"Registration successful: {email}");
             return true;
@@ -89,18 +103,10 @@ namespace MeetAgain.Server.Services
             try
             {
                 var url = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={_apiKey}";
-
-                var payload = new
-                {
-                    email             = email,
-                    password          = password,
-                    returnSecureToken = true
-                };
+                var payload = new { email, password, returnSecureToken = true };
 
                 var response    = await _http.PostAsJsonAsync(url, payload);
                 var rawResponse = await response.Content.ReadAsStringAsync();
-
-                // Console.WriteLine("Firebase Login Response: " + rawResponse);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -110,28 +116,32 @@ namespace MeetAgain.Server.Services
                 }
 
                 var json = JsonDocument.Parse(rawResponse).RootElement;
+                var idToken = json.TryGetProperty("idToken", out var idProp) ? idProp.GetString() ?? "" : "";
 
-                var idToken = json.TryGetProperty("idToken",  out var idProp)  ? idProp.GetString()  ?? "" : "";
-                var localId = json.TryGetProperty("localId",  out var lidProp) ? lidProp.GetString() ?? "" : "";
-
-                if (string.IsNullOrWhiteSpace(idToken) || string.IsNullOrWhiteSpace(localId))
+                if (string.IsNullOrWhiteSpace(idToken))
                 {
                     LastFirebaseError = "Unexpected response from Firebase. Please try again.";
                     Console.WriteLine(LastFirebaseError);
                     return false;
                 }
 
-                var user = await _fs.GetUserAsync(localId);
-                if (user == null)
+                // Load the profile from the API using the fresh token
+                var profile = await _api.SendWithTokenAsync<AppUser>(idToken, HttpMethod.Get, "api/users/me");
+                if (profile.Status == 404)
                 {
                     LastFirebaseError = "User account not found. Please register first.";
                     Console.WriteLine(LastFirebaseError);
                     return false;
                 }
+                if (!profile.Ok || profile.Value == null)
+                {
+                    LastFirebaseError = "Could not reach the server. Please try again.";
+                    Console.WriteLine($"Login failed: profile request returned status {profile.Status}");
+                    return false;
+                }
 
-                CurrentUser = user;
+                CurrentUser = profile.Value;
 
-                // ✅ Thread rememberMe through to the state provider
                 if (AuthStateProvider != null)
                     await AuthStateProvider.SetTokenAsync(idToken, rememberMe);
 
@@ -153,13 +163,10 @@ namespace MeetAgain.Server.Services
             try
             {
                 var url = $"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={_apiKey}";
-
                 var payload = new { requestType = "PASSWORD_RESET", email = email };
 
                 var response = await _http.PostAsJsonAsync(url, payload);
                 var body     = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"Password reset response: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -213,6 +220,10 @@ namespace MeetAgain.Server.Services
                         "USER_DISABLED"               => "This account has been disabled.",
                         "TOO_MANY_ATTEMPTS_TRY_LATER" => "Too many failed attempts. Please try again later.",
                         "INVALID_LOGIN_CREDENTIALS"   => "Incorrect email or password.",
+                        "EMAIL_EXISTS"                => "Email already exists.",
+                        "OPERATION_NOT_ALLOWED"       => "Sign-up is currently disabled.",
+                        var m when m != null && m.StartsWith("WEAK_PASSWORD")
+                                                      => "Password should be at least 6 characters.",
                         var other                     => $"Error: {other}"
                     };
                 }

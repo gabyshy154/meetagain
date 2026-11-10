@@ -3,6 +3,12 @@ using System.Net.Http.Json;
 
 namespace MeetAgain.Server.Services
 {
+    /// <summary>Result of an API call. Status 0 means the API could not be reached (or nobody is signed in).</summary>
+    public record ApiResult<T>(T? Value, int Status)
+    {
+        public bool Ok => Status >= 200 && Status < 300;
+    }
+
     /// <summary>
     /// Calls the MeetAgain API on behalf of the signed-in user by attaching their
     /// Firebase ID token. Failures are logged and returned as null/false so a page
@@ -20,15 +26,19 @@ namespace MeetAgain.Server.Services
             _auth = auth;
         }
 
-        private async Task<HttpResponseMessage?> RawAsync(HttpMethod method, string path, object? body)
+        private async Task<HttpResponseMessage?> RawAsync(
+            HttpMethod method, string path, object? body, string? tokenOverride = null)
         {
             try
             {
-                if (string.IsNullOrEmpty(_auth.Token))
-                    await _auth.GetAuthenticationStateAsync();   // loads the token from browser storage
-
-                var token = _auth.Token;
-                if (string.IsNullOrEmpty(token)) return null;     // not signed in
+                var token = tokenOverride;
+                if (string.IsNullOrEmpty(token))
+                {
+                    if (string.IsNullOrEmpty(_auth.Token))
+                        await _auth.GetAuthenticationStateAsync();   // loads the token from browser storage
+                    token = _auth.Token;
+                }
+                if (string.IsNullOrEmpty(token)) return null;         // not signed in
 
                 using var req = new HttpRequestMessage(method, path);
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -75,6 +85,29 @@ namespace MeetAgain.Server.Services
             if (!res.IsSuccessStatusCode)
                 Console.WriteLine($"API {method} {path} -> {(int)res.StatusCode}");
             return res.IsSuccessStatusCode;
+        }
+
+        /// <summary>
+        /// Like SendAsync, but uses a token you pass in (needed during login and sign-up,
+        /// before the token has been stored) and tells you the HTTP status.
+        /// </summary>
+        public async Task<ApiResult<T>> SendWithTokenAsync<T>(
+            string token, HttpMethod method, string path, object? body = null)
+        {
+            using var res = await RawAsync(method, path, body, token);
+            if (res == null) return new ApiResult<T>(default, 0);
+
+            var status = (int)res.StatusCode;
+            if (!res.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"API {method} {path} -> {status}");
+                return new ApiResult<T>(default, status);
+            }
+
+            T? value = default;
+            try { value = await res.Content.ReadFromJsonAsync<T>(); }
+            catch (Exception ex) { Console.WriteLine($"API {method} {path}: bad response body: {ex.Message}"); }
+            return new ApiResult<T>(value, status);
         }
     }
 }
