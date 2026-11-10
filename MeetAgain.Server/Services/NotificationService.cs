@@ -7,12 +7,59 @@ namespace MeetAgain.Server.Services
     {
         private readonly FirestoreDb _db;
         private readonly CurrentUserAccessor _currentUserAccessor;
+        private readonly ApiClient _api;   // NEW – Stage C2
 
-        public NotificationService(FirestoreDb db, CurrentUserAccessor currentUserAccessor)
+        public NotificationService(FirestoreDb db, CurrentUserAccessor currentUserAccessor, ApiClient api)
         {
             _db = db;
             _currentUserAccessor = currentUserAccessor;
+            _api = api;
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Stage C2: the five methods the pages use now go through the API.
+        // The API does the Firestore work and works out the user from the token.
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Get all notifications for current user
+        public async Task<List<NotificationDto>> GetMyNotificationsAsync()
+        {
+            return await _api.GetAsync<List<NotificationDto>>("api/notifications")
+                   ?? new List<NotificationDto>();
+        }
+
+        // Get unread notification count
+        public async Task<int> GetUnreadCountAsync()
+        {
+            return await _api.GetAsync<int>("api/notifications/unread-count");
+        }
+
+        // Mark notification as read
+        public async Task MarkAsReadAsync(string notificationId)
+        {
+            if (string.IsNullOrWhiteSpace(notificationId)) return;
+            await _api.SendAsync(HttpMethod.Post,
+                $"api/notifications/{Uri.EscapeDataString(notificationId)}/read");
+        }
+
+        // Mark all notifications as read
+        public async Task MarkAllAsReadAsync()
+        {
+            await _api.SendAsync(HttpMethod.Post, "api/notifications/read-all");
+        }
+
+        // Delete a notification
+        public async Task DeleteNotificationAsync(string notificationId)
+        {
+            if (string.IsNullOrWhiteSpace(notificationId)) return;
+            await _api.SendAsync(HttpMethod.Delete,
+                $"api/notifications/{Uri.EscapeDataString(notificationId)}");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // UNCHANGED for now: still used by the web-side Friend/Group/Meetup
+        // services. These disappear from the web app when those services move.
+        // ─────────────────────────────────────────────────────────────────────
 
         // Create a notification for a user
         public async Task CreateNotificationAsync(string userId, string type, string message, Dictionary<string, object>? metadata = null)
@@ -48,101 +95,6 @@ namespace MeetAgain.Server.Services
             }
 
             await docRef.SetAsync(data);
-        }
-
-        // Get all notifications for current user
-        public async Task<List<NotificationDto>> GetMyNotificationsAsync()
-        {
-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
-            if (string.IsNullOrEmpty(userId)) return new List<NotificationDto>();
-
-            var snapshot = await _db.Collection("users").Document(userId)
-                                   .Collection("notifications")
-                                   .OrderByDescending("CreatedAt")
-                                   .Limit(50)
-                                   .GetSnapshotAsync();
-
-            var notifications = new List<NotificationDto>();
-            foreach (var doc in snapshot.Documents)
-            {
-                var data = doc.ToDictionary();
-                
-                // Use document ID if Id field is not set
-                var notificationId = data.ContainsKey("Id") && !string.IsNullOrEmpty(data["Id"]?.ToString()) 
-                    ? data["Id"].ToString() 
-                    : doc.Id;
-                
-                notifications.Add(new NotificationDto
-                {
-                    Id = notificationId ?? "",
-                    Type = data.ContainsKey("Type") ? data["Type"]?.ToString() ?? "" : "",
-                    Message = data.ContainsKey("Message") ? data["Message"]?.ToString() ?? "" : "",
-                    CreatedAt = data.ContainsKey("CreatedAt") ? data["CreatedAt"]?.ToString() ?? "" : "",
-                    IsRead = data.ContainsKey("IsRead") && (bool)data["IsRead"],
-                    MeetupId = data.ContainsKey("MeetupId") ? data["MeetupId"]?.ToString() : null,
-                    FriendRequestId = data.ContainsKey("FriendRequestId") ? data["FriendRequestId"]?.ToString() : null,
-                    GroupId = data.ContainsKey("GroupId") ? data["GroupId"]?.ToString() : null
-                });
-            }
-
-            return notifications;
-        }
-
-        // Get unread notification count
-        public async Task<int> GetUnreadCountAsync()
-        {
-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
-            if (string.IsNullOrEmpty(userId)) return 0;
-
-            var snapshot = await _db.Collection("users").Document(userId)
-                                   .Collection("notifications")
-                                   .WhereEqualTo("IsRead", false)
-                                   .GetSnapshotAsync();
-
-            return snapshot.Count;
-        }
-
-        // Mark notification as read
-        public async Task MarkAsReadAsync(string notificationId)
-        {
-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
-            if (string.IsNullOrEmpty(userId)) return;
-
-            var docRef = _db.Collection("users").Document(userId)
-                           .Collection("notifications").Document(notificationId);
-
-            await docRef.UpdateAsync("IsRead", true);
-        }
-
-        // Mark all notifications as read
-        public async Task MarkAllAsReadAsync()
-        {
-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
-            if (string.IsNullOrEmpty(userId)) return;
-
-            var snapshot = await _db.Collection("users").Document(userId)
-                                   .Collection("notifications")
-                                   .WhereEqualTo("IsRead", false)
-                                   .GetSnapshotAsync();
-
-            var batch = _db.StartBatch();
-            foreach (var doc in snapshot.Documents)
-            {
-                batch.Update(doc.Reference, "IsRead", true);
-            }
-
-            await batch.CommitAsync();
-        }
-
-        // Delete a notification
-        public async Task DeleteNotificationAsync(string notificationId)
-        {
-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
-            if (string.IsNullOrEmpty(userId)) return;
-
-            await _db.Collection("users").Document(userId)
-                    .Collection("notifications").Document(notificationId)
-                    .DeleteAsync();
         }
 
         // Notification helper methods for common scenarios
