@@ -17,4 +17,7 @@
     <Content Remove="firebase-adminsdk.json" />
     <None Remove="firebase-adminsdk.json" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MeetAgain.Shared\MeetAgain.Shared.csproj" />
+  </ItemGroup>
 </Project>

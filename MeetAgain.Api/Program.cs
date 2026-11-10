@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
+using MeetAgain.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -11,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Firebase settings
 // AWS:    base64 of the service-account JSON in FIREBASE_CREDENTIALS_B64
 // Laptop: file named by Firebase:CredentialsFile (appsettings.json)
-// The credentials now live ONLY on this API server, never on the web server.
+// The credentials live ONLY on this API server, never on the web server.
 // ------------------------------------------------------
 var credentialsB64  = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_B64");
 var credentialsJson = !string.IsNullOrWhiteSpace(credentialsB64)
@@ -52,7 +53,7 @@ builder.Services.AddSingleton(firestoreDb);
 
 // ------------------------------------------------------
 // Authentication: every request must carry the user's Firebase ID token
-// (Authorization: Bearer <token>). The keys are downloaded from Google automatically.
+// (Authorization: Bearer <token>). Google's signing keys are downloaded automatically.
 // ------------------------------------------------------
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -71,14 +72,19 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 // ------------------------------------------------------
-// TODO (next step): register the services moved over from the web app, e.g.
-//   builder.Services.AddScoped<FirestoreService>();
-//   builder.Services.AddScoped<FriendService>();
-//   builder.Services.AddScoped<MeetupService>();
-//   ... GroupService, NotificationService, AvailabilityService
+// Business logic (moved over from the web app)
 // ------------------------------------------------------
+builder.Services.AddScoped<CurrentUserAccessor>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<FirestoreService>();
+builder.Services.AddScoped<FriendService>();
+builder.Services.AddScoped<GroupService>();
+builder.Services.AddScoped<MeetupService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<AvailabilityService>();
 
 var app = builder.Build();
 
