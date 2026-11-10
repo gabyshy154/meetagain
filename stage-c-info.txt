@@ -1,0 +1,662 @@
+=== Server Program.cs
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Firestore;
+using MeetAgain.Server.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ------------------------------------------------------
+// Load Firebase settings
+// Server (AWS): base64 of the service-account JSON in FIREBASE_CREDENTIALS_B64
+//               (base64 survives Elastic Beanstalk's env-var packing; raw JSON does not)
+// Laptop:       falls back to the file named in appsettings.json
+// ------------------------------------------------------
+var credentialsB64  = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_B64");
+var credentialsJson = !string.IsNullOrWhiteSpace(credentialsB64)
+    ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(credentialsB64.Trim()))
+    : Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS");
+var credentialsPath = builder.Configuration["Firebase:CredentialsFile"];
+var projectId       = builder.Configuration["Firebase:ProjectId"];
+var apiKey          = builder.Configuration["Firebase:ApiKey"];
+
+if (string.IsNullOrWhiteSpace(credentialsJson) && string.IsNullOrWhiteSpace(credentialsPath))
+    throw new Exception("Set FIREBASE_CREDENTIALS_B64 or Firebase:CredentialsFile");
+if (string.IsNullOrWhiteSpace(projectId))
+    throw new Exception("Missing Firebase:ProjectId");
+if (string.IsNullOrWhiteSpace(apiKey))
+    throw new Exception("Missing Firebase:ApiKey");
+
+// ------------------------------------------------------
+// Initialize Firebase Admin SDK
+// ------------------------------------------------------
+GoogleCredential googleCred;
+if (!string.IsNullOrWhiteSpace(credentialsJson))
+{
+    googleCred = GoogleCredential.FromJson(credentialsJson);
+}
+else
+{
+    using var stream = new FileStream(credentialsPath!, FileMode.Open, FileAccess.Read);
+    googleCred = GoogleCredential.FromStream(stream);
+}
+googleCred = googleCred.CreateScoped("https://www.googleapis.com/auth/cloud-platform");
+
+if (FirebaseApp.DefaultInstance == null)
+{
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = googleCred
+    });
+}
+
+// ------------------------------------------------------
+// Firestore
+// ------------------------------------------------------
+var firestoreDb = new FirestoreDbBuilder
+{
+    ProjectId  = projectId,
+    Credential = googleCred
+}.Build();
+
+builder.Services.AddSingleton(firestoreDb);
+
+// ------------------------------------------------------
+// Blazor & Authentication
+// ------------------------------------------------------
+builder.Services.AddRazorPages();
+
+// ✅ AddServerSideBlazor registers ProtectedSessionStorage automatically.
+//    We register ProtectedLocalStorage separately for Remember Me support.
+//    Do NOT manually register ProtectedSessionStorage — AddServerSideBlazor
+//    already does it and a duplicate causes injection conflicts.
+builder.Services.AddServerSideBlazor().AddCircuitOptions(options =>
+{
+    options.DetailedErrors = builder.Environment.IsDevelopment();
+});
+
+// Registers ProtectedLocalStorage (needed for Remember Me persistence)
+builder.Services.AddScoped<ProtectedLocalStorage>();
+
+// Auth state provider wiring
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<CustomAuthStateProvider>());
+
+builder.Services.AddAuthorizationCore();
+
+// ------------------------------------------------------
+// App Services
+// ------------------------------------------------------
+builder.Services.AddScoped<FirestoreService>();
+
+builder.Services.AddScoped(sp =>
+{
+    var fs                = sp.GetRequiredService<FirestoreService>();
+    var authStateProvider = sp.GetRequiredService<CustomAuthStateProvider>();
+    var svc               = new AuthService(fs, apiKey);
+    svc.AuthStateProvider = authStateProvider;
+    fs.AuthStateProvider  = authStateProvider;
+    return svc;
+});
+
+builder.Services.AddScoped<CurrentUserAccessor>();
+builder.Services.AddScoped<FriendService>();
+builder.Services.AddScoped<GroupService>();
+builder.Services.AddScoped<MeetupService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<AvailabilityService>();
+
+// ------------------------------------------------------
+// Build app
+// ------------------------------------------------------
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
+
+app.Run();=== CustomAuthStateProvider.cs
+using System.Security.Claims;
+using FirebaseAdmin.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+
+namespace MeetAgain.Server.Services
+{
+    public class CustomAuthStateProvider : AuthenticationStateProvider
+    {
+        private const string TokenKey      = "authToken";
+        private const string RememberMeKey = "rememberMe";
+
+        // Session storage  → clears when the tab/browser closes
+        private readonly ProtectedSessionStorage _session;
+        // Local storage    → persists across browser restarts
+        private readonly ProtectedLocalStorage   _local;
+
+        private string? _token;
+
+        public CustomAuthStateProvider(
+            ProtectedSessionStorage session,
+            ProtectedLocalStorage   local)
+        {
+            _session = session;
+            _local   = local;
+        }
+
+        // ── Public API ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Call this after a successful login.
+        /// Pass rememberMe = true  → token goes into localStorage  (survives browser restart)
+        /// Pass rememberMe = false → token goes into sessionStorage (clears on tab close)
+        /// </summary>
+        public async Task SetTokenAsync(string? token, bool rememberMe = false)
+        {
+            _token = token;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                // Logout — wipe both stores so no stale token lingers
+                await TryDelete(_session, TokenKey);
+                await TryDelete(_local,   TokenKey);
+                await TryDelete(_local,   RememberMeKey);
+            }
+            else if (rememberMe)
+            {
+                // Persist across browser restarts
+                await _local.SetAsync(TokenKey,      token);
+                await _local.SetAsync(RememberMeKey, true);
+                // Clear any leftover session token so we don't have duplicates
+                await TryDelete(_session, TokenKey);
+            }
+            else
+            {
+                // Session-only
+                await _session.SetAsync(TokenKey, token);
+                // Clear any leftover local token (e.g. user had previously used Remember Me)
+                await TryDelete(_local, TokenKey);
+                await TryDelete(_local, RememberMeKey);
+            }
+
+            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        }
+
+        // ── Core override ─────────────────────────────────────────────────────
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+        {
+            var anonymous = new AuthenticationState(
+                new ClaimsPrincipal(new ClaimsIdentity()));
+
+            try
+            {
+                // 1. Use the in-memory token if we already have it
+                if (string.IsNullOrWhiteSpace(_token))
+                {
+                    // 2. Try localStorage first (Remember Me path)
+                    var localResult = await _local.GetAsync<string>(TokenKey);
+                    if (localResult.Success && !string.IsNullOrWhiteSpace(localResult.Value))
+                    {
+                        _token = localResult.Value;
+                        Console.WriteLine("AuthStateProvider: token loaded from localStorage (Remember Me)");
+                    }
+                    else
+                    {
+                        // 3. Fall back to sessionStorage
+                        var sessionResult = await _session.GetAsync<string>(TokenKey);
+                        if (sessionResult.Success && !string.IsNullOrWhiteSpace(sessionResult.Value))
+                        {
+                            _token = sessionResult.Value;
+                            Console.WriteLine("AuthStateProvider: token loaded from sessionStorage");
+                        }
+                    }
+                }
+
+                Console.WriteLine($"AuthStateProvider: token is " +
+                    $"{(string.IsNullOrWhiteSpace(_token) ? "null/empty" : "present")}");
+
+                if (string.IsNullOrWhiteSpace(_token))
+                    return anonymous;
+
+                // Validate with Firebase
+                FirebaseToken decoded;
+                try
+                {
+                    decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(_token);
+                }
+                catch (FirebaseAdmin.Auth.FirebaseAuthException ex)
+                {
+                    // Token expired or revoked — clean up both stores
+                    Console.WriteLine($"AuthStateProvider: token invalid ({ex.AuthErrorCode}), clearing");
+                    _token = null;
+                    await TryDelete(_session, TokenKey);
+                    await TryDelete(_local,   TokenKey);
+                    await TryDelete(_local,   RememberMeKey);
+                    return anonymous;
+                }
+
+                decoded.Claims.TryGetValue("email", out var emailObj);
+                var email = emailObj?.ToString() ?? string.Empty;
+
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, decoded.Uid ?? string.Empty),
+                    new Claim(ClaimTypes.Email,          email),
+                    // Keep "user_id" claim so CurrentUserAccessor keeps working
+                    new Claim("user_id",                 decoded.Uid ?? string.Empty)
+                };
+
+                var identity  = new ClaimsIdentity(claims, "firebase");
+                var principal = new ClaimsPrincipal(identity);
+                return new AuthenticationState(principal);
+            }
+            catch (Exception ex)
+            {
+                // Any unexpected error → treat as anonymous, wipe stores
+                Console.WriteLine($"AuthStateProvider unexpected error: {ex.Message}");
+                _token = null;
+                await TryDelete(_session, TokenKey);
+                await TryDelete(_local,   TokenKey);
+                await TryDelete(_local,   RememberMeKey);
+                return anonymous;
+            }
+        }
+
+        // ── Helper: swallow errors on Delete (key may not exist) ─────────────
+        private static async Task TryDelete<T>(T storage, string key)
+            where T : ProtectedBrowserStorage
+        {
+            try   { await storage.DeleteAsync(key); }
+            catch { /* key didn't exist — safe to ignore */ }
+        }
+    }
+}=== CurrentUserAccessor.cs
+using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
+
+namespace MeetAgain.Server.Services
+{
+    public class CurrentUserAccessor
+    {
+        private readonly AuthenticationStateProvider _authStateProvider;
+
+        public CurrentUserAccessor(AuthenticationStateProvider authStateProvider)
+        {
+            _authStateProvider = authStateProvider;
+        }
+
+        public async Task<(string? Uid, string? Email)> GetUserAsync()
+        {
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated != true)
+                return (null, null);
+
+            var uid = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var email = user.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
+
+            return (uid, email);
+        }
+    }
+}
+=== public members of FriendService
+6:    public class FriendService
+7-    {
+8-        private readonly FirestoreDb _db;
+9-        private readonly AuthService _auth;
+--
+12:        public FriendService(FirestoreDb db, AuthService auth, CurrentUserAccessor currentUser)
+13-        {
+14-            _db = db;
+15-            _auth = auth;
+--
+20:        public async Task<bool> SendFriendRequestAsync(string recipientEmail)
+21-        {
+22-            // Use CurrentUserAccessor for better reliability
+23-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+--
+143:        public async Task<List<FriendRequest>> GetFriendRequestsAsync()
+144-        {
+145-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+146-            if (string.IsNullOrEmpty(currentUserId))
+--
+194:        public async Task<bool> AcceptFriendRequestAsync(string fromUserId)
+195-        {
+196-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+197-            if (string.IsNullOrEmpty(currentUserId))
+--
+322:        public async Task<bool> RejectFriendRequestAsync(string fromUserId)
+323-        {
+324-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+325-            if (string.IsNullOrEmpty(currentUserId))
+--
+357:        public async Task<List<Friend>> GetFriendsAsync()
+358-        {
+359-            // CRITICAL FIX: Always wait for authentication first
+360-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+--
+406:        public async Task<bool> RemoveFriendAsync(string friendId)
+407-        {
+408-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+409-            if (string.IsNullOrEmpty(currentUserId))
+--
+453:        public async Task<AppUser?> SearchUserByEmailAsync(string email)
+454-        {
+455-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+456-            if (string.IsNullOrEmpty(currentUserId))
+=== public members of GroupService
+6:    public class GroupService
+7-    {
+8-        private readonly FirestoreDb _db;
+9-        private readonly AuthService _auth;
+--
+12:        public GroupService(FirestoreDb db, AuthService auth, CurrentUserAccessor currentUser)
+13-        {
+14-            _db = db;
+15-            _auth = auth;
+--
+20:        public async Task<string?> CreateGroupAsync(CreateGroupModel model)
+21-        {
+22-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+23-            if (string.IsNullOrEmpty(currentUserId))
+--
+89:        public async Task<List<GroupDto>> GetMyGroupsAsync()
+90-        {
+91-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+92-            if (string.IsNullOrEmpty(currentUserId))
+--
+149:        public async Task<GroupDto?> GetGroupDetailAsync(string groupId)
+150-        {
+151-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+152-            if (string.IsNullOrEmpty(currentUserId))
+--
+200:        public async Task<GroupDto?> GetGroupByIdAsync(string groupId)
+201-        {
+202-            return await GetGroupDetailAsync(groupId);
+203-        }
+--
+207:        public async Task<bool> AddMembersToGroupAsync(string groupId, List<string> friendIds,
+208-            bool skipOwnerCheck = false)
+209-        {
+210-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+--
+275:        public async Task<bool> RemoveMemberAsync(string groupId, string memberId)
+276-        {
+277-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+278-            if (string.IsNullOrEmpty(currentUserId))
+--
+316:        public async Task<bool> DeleteGroupAsync(string groupId)
+317-        {
+318-            var (currentUserId, _) = await _currentUser.GetUserAsync();
+319-            if (string.IsNullOrEmpty(currentUserId))
+--
+356:        public async Task<List<string>> GetGroupMemberIdsAsync(string groupId)
+357-        {
+358-            try
+359-            {
+=== public members of MeetupService
+6:    public class MeetupService
+7-    {
+8-        private readonly FirestoreDb _db;
+9-        private readonly FirestoreService _fs;
+--
+13:        public MeetupService(FirestoreDb db, FirestoreService fs, AuthService auth, CurrentUserAccessor currentUser)
+14-        {
+15-            _db = db;
+16-            _fs = fs;
+--
+24:        public async Task<bool> CreateMeetupAsync(CreateMeetupModel model, List<string>? invitedFriendIds = null)
+25-        {
+26-            var (uid, _) = await _currentUser.GetUserAsync();
+27-            if (string.IsNullOrWhiteSpace(uid)) return false;
+--
+204:        public async Task<bool> RespondToMeetupAsync(string meetupId, string status)
+205-        {
+206-            var (uid, _) = await _currentUser.GetUserAsync();
+207-            if (string.IsNullOrWhiteSpace(uid)) return false;
+--
+287:        public async Task<List<MeetupDto>> GetMyMeetupsAsync()
+288-        {
+289-            var (uid, _) = await _currentUser.GetUserAsync();
+290-            if (string.IsNullOrWhiteSpace(uid)) return new List<MeetupDto>();
+--
+351:        public async Task<MeetupDetailDto?> GetMeetupDetailAsync(string meetupId)
+352-        {
+353-            var (uid, _) = await _currentUser.GetUserAsync();
+354-            if (string.IsNullOrWhiteSpace(uid)) return null;
+--
+407:        public async Task<bool> DeleteMeetupAsync(string meetupId)
+408-        {
+409-            var (uid, _) = await _currentUser.GetUserAsync();
+410-            if (string.IsNullOrWhiteSpace(uid)) return false;
+--
+490:        public async Task<bool> UpdateMeetupAsync(Meetup meetup)
+491-        {
+492-            if (meetup == null || string.IsNullOrWhiteSpace(meetup.Id))
+493-                return false;
+=== public members of NotificationService
+6:    public class NotificationService
+7-    {
+8-        private readonly FirestoreDb _db;
+9-        private readonly CurrentUserAccessor _currentUserAccessor;
+--
+11:        public NotificationService(FirestoreDb db, CurrentUserAccessor currentUserAccessor)
+12-        {
+13-            _db = db;
+14-            _currentUserAccessor = currentUserAccessor;
+--
+18:        public async Task CreateNotificationAsync(string userId, string type, string message, Dictionary<string, object>? metadata = null)
+19-        {
+20-            var notification = new Notification
+21-            {
+--
+54:        public async Task<List<NotificationDto>> GetMyNotificationsAsync()
+55-        {
+56-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
+57-            if (string.IsNullOrEmpty(userId)) return new List<NotificationDto>();
+--
+92:        public async Task<int> GetUnreadCountAsync()
+93-        {
+94-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
+95-            if (string.IsNullOrEmpty(userId)) return 0;
+--
+106:        public async Task MarkAsReadAsync(string notificationId)
+107-        {
+108-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
+109-            if (string.IsNullOrEmpty(userId)) return;
+--
+118:        public async Task MarkAllAsReadAsync()
+119-        {
+120-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
+121-            if (string.IsNullOrEmpty(userId)) return;
+--
+138:        public async Task DeleteNotificationAsync(string notificationId)
+139-        {
+140-            var (userId, _) = await _currentUserAccessor.GetUserAsync();
+141-            if (string.IsNullOrEmpty(userId)) return;
+--
+149:        public async Task NotifyMeetupInviteAsync(string userId, string meetupTitle, string creatorName, string meetupId)
+150-        {
+151-            var message = $"{creatorName} invited you to '{meetupTitle}'";
+152-            await CreateNotificationAsync(userId, "meetup_invite", message, new Dictionary<string, object>
+--
+158:        public async Task NotifyMeetupUpdateAsync(string userId, string meetupTitle, string updateType, string meetupId)
+159-        {
+160-            var message = $"'{meetupTitle}' has been {updateType}";
+161-            await CreateNotificationAsync(userId, "meetup_update", message, new Dictionary<string, object>
+--
+167:        public async Task NotifyFriendRequestAsync(string userId, string fromUserName, string requestId)
+168-        {
+169-            var message = $"{fromUserName} sent you a friend request";
+170-            await CreateNotificationAsync(userId, "friend_request", message, new Dictionary<string, object>
+--
+176:        public async Task NotifyFriendRequestAcceptedAsync(string userId, string acceptedByName)
+177-        {
+178-            var message = $"{acceptedByName} accepted your friend request";
+179-            await CreateNotificationAsync(userId, "friend_request_accepted", message);
+--
+182:        public async Task NotifyGroupInviteAsync(string userId, string groupName, string invitedByName, string groupId)
+183-        {
+184-            var message = $"{invitedByName} added you to the group '{groupName}'";
+185-            await CreateNotificationAsync(userId, "group_invite", message, new Dictionary<string, object>
+--
+191:        public async Task NotifyRSVPChangeAsync(string creatorUserId, string userName, string meetupTitle, string status, string meetupId)
+192-        {
+193-            var message = $"{userName} {status} your meetup '{meetupTitle}'";
+194-            await CreateNotificationAsync(creatorUserId, "rsvp_change", message, new Dictionary<string, object>
+=== public members of AvailabilityService
+6:    public class AvailabilityService
+7-    {
+8-        private readonly FirestoreDb _db;
+9-
+10:        public AvailabilityService(FirestoreDb db)
+11-        {
+12-            _db = db;
+13-        }
+--
+16:        public async Task<UserAvailability> GetUserAvailabilityAsync(string userId)
+17-        {
+18-            var docRef = _db.Collection("users").Document(userId)
+19-                           .Collection("settings").Document("availability");
+--
+82:        public async Task SaveUserAvailabilityAsync(UserAvailability availability)
+83-        {
+84-            var docRef = _db.Collection("users").Document(availability.UserId)
+85-                           .Collection("settings").Document("availability");
+--
+108:        public async Task<List<SuggestedTimeSlot>> FindBestMeetupTimesAsync(
+109-            List<string> participantUserIds,
+110-            DateTime startDate,
+111-            DateTime endDate,
+=== public members of FirestoreService
+10:    public class FirestoreService
+11-    {
+12-        private readonly FirestoreDb _db;
+13:        public CustomAuthStateProvider? AuthStateProvider { get; set; }
+14-
+15:        public FirestoreService(FirestoreDb firestoreDb)
+16-        {
+17-            _db = firestoreDb ?? throw new ArgumentNullException(nameof(firestoreDb));
+18-        }
+--
+23:        public async Task<AppUser?> GetUserAsync(string userId)
+24-        {
+25-            var doc = await _db.Collection("users").Document(userId).GetSnapshotAsync();
+26-            if (!doc.Exists) return null;
+--
+33:        public async Task<List<AppUser>> GetAllUsersAsync()
+34-        {
+35-            var snap = await _db.Collection("users").GetSnapshotAsync();
+36-            return snap.Documents.Select(d =>
+--
+44:        public async Task CreateOrUpdateUserAsync(AppUser user)
+45-        {
+46-            if (string.IsNullOrWhiteSpace(user.Uid))
+47-                throw new ArgumentException("User must have Uid.");
+--
+57:        public async Task<string> CreateMeetupAsync(Meetup meetup)
+58-        {
+59-            if (string.IsNullOrWhiteSpace(meetup.Id))
+60-                meetup.Id = NewId();
+--
+71:        public async Task<Meetup?> GetMeetupByIdAsync(string meetupId)
+72-        {
+73-            var doc = await _db.Collection("meetups").Document(meetupId).GetSnapshotAsync();
+74-            if (!doc.Exists) return null;
+--
+81:        public async Task<List<MeetupDto>> GetUserMeetupsAsync(string userId)
+82-        {
+83-            var query = _db.Collection("meetups")
+84-                           .WhereEqualTo("CreatorUserId", userId)
+--
+107:        public Task DeleteMeetupAsync(string meetupId)
+108-        {
+109-            if (string.IsNullOrWhiteSpace(meetupId)) return Task.CompletedTask;
+110-            return _db.Collection("meetups").Document(meetupId).DeleteAsync();
+--
+116:        public Task DeleteMeetupAsync(string userId, string meetupId)
+117-        {
+118-            // You DO NOT use users/{userId}/meetups/...
+119-            // Your meetups are stored in root "meetups" collection.
+--
+128:        public async Task UpdateMeetupAsync(Meetup meetup)
+129-        {
+130-            if (string.IsNullOrWhiteSpace(meetup.Id))
+131-                throw new ArgumentException("Meetup ID is required.");
+--
+141:        public async Task AddFriendAsync(Friend friend)
+142-        {
+143-            if (string.IsNullOrWhiteSpace(friend.Id))
+144-                friend.Id = NewId();
+--
+153:        public async Task<List<Friend>> GetFriendsAsync(string userId)
+154-        {
+155-            var snap = await _db.Collection("friends")
+156-                                .WhereEqualTo("Id", userId)
+--
+162:        public Task RemoveFriendAsync(string friendId)
+163-        {
+164-            if (string.IsNullOrWhiteSpace(friendId)) return Task.CompletedTask;
+165-            return _db.Collection("friends").Document(friendId).DeleteAsync();
+--
+171:        public async Task CreateGroupAsync(Group group)
+172-        {
+173-            if (string.IsNullOrWhiteSpace(group.Id))
+174-                group.Id = NewId();
+--
+183:        public async Task<List<Group>> GetGroupsByOwnerAsync(string ownerId)
+184-        {
+185-            var snap = await _db.Collection("groups")
+186-                                .WhereEqualTo("OwnerId", ownerId)
+--
+192:        public async Task AddMemberAsync(string groupId, GroupMember member)
+193-        {
+194-            if (string.IsNullOrWhiteSpace(member.AddedAt))
+195-                member.AddedAt = DateTime.UtcNow.ToString("o");
+--
+202:        public async Task<List<GroupMember>> GetGroupMembersAsync(string groupId)
+203-        {
+204-            var snap = await _db.Collection("groups")
+205-                                .Document(groupId)
+--
+215:        public string NewId() => Guid.NewGuid().ToString("N");
+216-    }
+217-}
+=== appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Firebase": {
+    "CredentialsFile": "firebase-adminsdk.json",
+    "ProjectId": "meetagain-50f2b",
+    "ApiKey": "AIzaSyBly78fwVcU4QxPaXMEOmhWwOQolJC3Y2Q"
+  },
+  "AllowedHosts": "*"
+}=== wwwroot/appsettings.json
+{
+  "Firebase": {
+    "ApiKey": "AIzaSyBly78fwVcU4QxPaXMEOmhWwOQolJC3Y2Q",
+    "AuthDomain": "meetagain-50f2b.firebaseapp.com",
+    "ProjectId": "meetagain-50f2b",
+    "StorageBucket": "meetagain-50f2b.firebasestorage.app",
+    "MessagingSenderId": "446226875790",
+    "AppId": "1:446226875790:web:1dd05eacb4e5f5a0cad0df",
+    "MeasurementId": "G-XMZ086M7VK"
+  }
+}

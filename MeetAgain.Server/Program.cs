@@ -87,6 +87,19 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 builder.Services.AddAuthorizationCore();
 
 // ------------------------------------------------------
+// MeetAgain API client (NEW – Stage C1)
+// Base address comes from appsettings.json "Api:BaseUrl"
+// (on AWS: environment property Api__BaseUrl)
+// ------------------------------------------------------
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
+    ?? throw new Exception("Missing Api:BaseUrl");
+builder.Services.AddHttpClient<ApiClient>(c =>
+{
+    c.BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/");
+    c.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// ------------------------------------------------------
 // App Services
 // ------------------------------------------------------
 builder.Services.AddScoped<FirestoreService>();

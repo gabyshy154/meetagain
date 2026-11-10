@@ -17,6 +17,9 @@ namespace MeetAgain.Server.Services
 
         private string? _token;
 
+        /// <summary>The current Firebase ID token (NEW – Stage C1). Used by ApiClient to call the API.</summary>
+        public string? Token => _token;
+
         public CustomAuthStateProvider(
             ProtectedSessionStorage session,
             ProtectedLocalStorage   local)
