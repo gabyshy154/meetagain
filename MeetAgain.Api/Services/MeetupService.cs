@@ -372,6 +372,7 @@ namespace MeetAgain.Server.Services
 
                 var participants = new List<MeetupParticipant>();
                 string myRSVPStatus = "";
+                bool isParticipant = false;   // NEW
 
                 foreach (var doc in participantsSnapshot.Documents)
                 {
@@ -381,7 +382,16 @@ namespace MeetAgain.Server.Services
                     if (participant.UserId == uid)
                     {
                         myRSVPStatus = participant.Status;
+                        isParticipant = true;
                     }
+                }
+
+                // NEW: only the creator or an invited participant may see a meetup's
+                // details and its participant list (names + emails).
+                if (meetup.CreatorUserId != uid && !isParticipant)
+                {
+                    Console.WriteLine($"User {uid} is not part of meetup {meetupId}, denying detail");
+                    return null;
                 }
 
                 Console.WriteLine($"✅ Loaded meetup {meetupId} with {participants.Count} participants");
@@ -493,11 +503,28 @@ namespace MeetAgain.Server.Services
                 return false;
 
             var (uid, _) = await _currentUser.GetUserAsync();
-            if (string.IsNullOrWhiteSpace(uid) || meetup.CreatorUserId != uid)
+            if (string.IsNullOrWhiteSpace(uid))
                 return false;
 
             try
             {
+                // FIXED: check ownership against the STORED meetup, never the client's copy
+                var existingDoc = await _db.Collection("meetups").Document(meetup.Id).GetSnapshotAsync();
+                if (!existingDoc.Exists) return false;
+
+                var existing = existingDoc.ConvertTo<Meetup>();
+                if (existing.CreatorUserId != uid)
+                {
+                    Console.WriteLine($"User {uid} is not the creator, cannot update");
+                    return false;
+                }
+
+                // Fields the client must not be able to change
+                meetup.CreatorUserId = existing.CreatorUserId;
+                meetup.CreatorName = existing.CreatorName;
+                meetup.ParticipantCount = existing.ParticipantCount;
+                meetup.CreatedAt = existing.CreatedAt;
+
                 await _db.Collection("meetups").Document(meetup.Id).SetAsync(meetup);
                 Console.WriteLine($"✅ Updated meetup: {meetup.Id}");
                 
